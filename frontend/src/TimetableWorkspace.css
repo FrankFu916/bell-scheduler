@@ -1,0 +1,60 @@
+.timetable-workspace { margin-top: 24px; padding: 24px; border: 1px solid #d8e2eb; border-radius: 18px; background: #fff; color: #17304b; }
+.timetable-heading, .timetable-result-meta, .timetable-pagination, .timetable-inspector-heading { display: flex; align-items: center; gap: 12px; }
+.timetable-heading, .timetable-inspector-heading { justify-content: space-between; }
+.timetable-heading h2 { margin: 3px 0 0; font-size: 1.45rem; }
+.timetable-eyebrow { color: #486981; font-size: .8rem; letter-spacing: .06em; }
+.timetable-readonly { border-radius: 999px; background: #edf5f3; color: #236753; padding: 6px 12px; font-size: .85rem; }
+.timetable-intro, .timetable-grid-note { color: #52697e; font-size: .9rem; line-height: 1.65; }
+.timetable-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; margin: 20px 0 12px; }
+.timetable-controls label { display: grid; gap: 6px; font-size: .87rem; font-weight: 600; }
+.timetable-controls select { min-width: 170px; max-width: 360px; padding: 9px 12px; border: 1px solid #b9cad8; border-radius: 8px; background: #fff; font: inherit; color: inherit; }
+.timetable-workspace button { cursor: pointer; font: inherit; }
+.timetable-pagination button, .timetable-list button, .timetable-inspector button { background: #fff; color: #254e70; border: 1px solid #b9cad8; padding: 7px 10px; border-radius: 7px; }
+.timetable-workspace button:disabled { cursor: default; opacity: .45; }
+.timetable-workspace :is(button, select, [tabindex]):focus-visible { outline: 3px solid #4382ab; outline-offset: 3px; }
+.timetable-pagination { flex-wrap: wrap; font-size: .85rem; }
+.timetable-status { min-height: 24px; color: #496276; font-size: .9rem; margin: 10px 0; }
+.timetable-error { border: 1px solid #dfb0a6; border-radius: 9px; background: #fff4ef; padding: 14px; color: #7e3327; }
+.timetable-error p { margin: 8px 0; }
+.timetable-result-meta { flex-wrap: wrap; margin: 20px 0 12px; }
+.timetable-result-meta span { color: #51697a; font-size: .85rem; }
+.timetable-grid-scroll, .timetable-list-scroll { overflow: auto; border: 1px solid #d8e2eb; border-radius: 10px; }
+.timetable-grid, .timetable-list { border-collapse: collapse; width: 100%; font-size: .86rem; }
+.timetable-grid { table-layout: fixed; min-width: 760px; }
+.timetable-grid caption, .timetable-list caption { padding: 10px; text-align: left; font-weight: 700; background: #f2f6fa; }
+.timetable-grid th, .timetable-grid td, .timetable-list th, .timetable-list td { padding: 10px; border: 1px solid #e2e9ef; text-align: left; }
+.timetable-grid thead th, .timetable-list th { color: #4a657a; background: #f7f9fb; font-weight: 600; }
+.timetable-grid th:first-child { width: 74px; }
+.timetable-grid td { vertical-align: top; height: 92px; padding: 6px; }
+.timetable-grid tbody th { vertical-align: top; font-weight: 500; background: #fbfcfe; }
+.timetable-grid .timetable-break :is(th, td) { border-top: 5px solid #d5e1e9; }
+.timetable-lesson { display: grid; width: 100%; gap: 5px; margin-bottom: 5px; padding: 8px; text-align: left; border: 1px solid #b6d2db; border-radius: 7px; background: #edf6f7; color: #234d62; overflow-wrap: anywhere; }
+.timetable-lesson span { font-size: .76rem; }
+.timetable-lesson:hover { background: #deeff1; border-color: #6b9bab; }
+.timetable-empty { display: block; padding: 14px 4px; color: #607486; font-size: .78rem; }
+.timetable-other-page { display: block; color: #6b552c; background: #fff5dc; border-radius: 5px; padding: 7px; font-size: .76rem; }
+.timetable-row-pagination { justify-content: end; margin: 18px 0 10px; }
+.timetable-details-layout { display: flex; align-items: start; gap: 16px; }
+.timetable-list-scroll { flex: 1; min-width: 0; }
+.timetable-list { min-width: 660px; }
+.timetable-list small { display: block; margin-top: 4px; color: #596f81; }
+.timetable-inspector { width: 310px; flex: 0 0 310px; border: 1px solid #bfd0de; border-radius: 10px; background: #f7fafc; padding: 16px; }
+.timetable-inspector h3 { margin: 0; font-size: 1.05rem; }
+.timetable-workspace dl { margin-bottom: 0; }
+.timetable-workspace dt { margin-top: 12px; color: #5d7283; font-size: .8rem; }
+.timetable-workspace dd { margin: 4px 0 0; line-height: 1.5; overflow-wrap: anywhere; }
+.timetable-workspace code { overflow-wrap: anywhere; font-size: .78rem; }
+.timetable-quality { margin-top: 18px; padding: 14px; border: 1px solid #dce5ec; border-radius: 9px; background: #fafcfd; font-size: .86rem; }
+.timetable-quality summary { cursor: pointer; font-weight: 600; }
+.timetable-quality p, .timetable-quality li { line-height: 1.7; }
+@media (max-width: 1250px) {
+  .timetable-details-layout { flex-direction: column; }
+  .timetable-list-scroll, .timetable-inspector { width: 100%; }
+  .timetable-inspector { flex-basis: auto; box-sizing: border-box; }
+}
+@media (max-width: 700px) {
+  .timetable-workspace { padding: 16px; }
+  .timetable-controls { align-items: stretch; }
+  .timetable-controls label { width: 100%; }
+  .timetable-controls select { max-width: none; }
+}

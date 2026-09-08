@@ -1,0 +1,20 @@
+[package]
+name = "class-schedule-test-oracle"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+class-schedule-scheduling = { path = "../scheduling" }
+class-schedule-validation = { path = "../validation" }
+thiserror.workspace = true
+
+[dev-dependencies]
+class-schedule-domain = { path = "../domain" }
+uuid.workspace = true
+
+[lints]
+workspace = true

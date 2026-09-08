@@ -1,0 +1,10 @@
+排课助手 · Bell
+Copyright 2026 Bell contributors
+
+This project's original source code, documentation, and synthetic fixtures
+are licensed under the Apache License, Version 2.0. See LICENSE.
+
+This project uses Google OR-Tools and other third-party software. Those
+components retain their own copyright notices and licenses; the project's
+Apache-2.0 license does not replace them. See THIRD_PARTY_LICENSES.md and
+third_party/dependency-license-inventory.json for dependency provenance.

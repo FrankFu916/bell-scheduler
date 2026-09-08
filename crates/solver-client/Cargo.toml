@@ -1,0 +1,23 @@
+[package]
+name = "solver-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+solver-contract = { path = "../solver-contract" }
+thiserror.workspace = true
+
+[[bin]]
+name = "solver-client-test-worker"
+path = "tests/support/fake_worker.rs"
+test = false
+bench = false
+doc = false
+
+[lints]
+workspace = true
+

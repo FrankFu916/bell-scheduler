@@ -1,0 +1,20 @@
+[package]
+name = "class-schedule-scoring"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+class-schedule-domain = { path = "../domain" }
+class-schedule-scheduling = { path = "../scheduling" }
+class-schedule-validation = { path = "../validation" }
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+uuid.workspace = true
+
+[lints]
+workspace = true

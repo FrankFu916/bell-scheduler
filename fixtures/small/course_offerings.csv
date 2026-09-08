@@ -1,0 +1,13 @@
+course_plan_code,audience_kind,audience_code,teacher_assignment,teacher_codes,room_policy,room_candidates,preferred_rooms,fallback_rooms
+CP-CHINESE,administrative_class,AC01,fixed,T-CHN-1,,,,
+CP-CHINESE,administrative_class,AC02,fixed,T-CHN-2,,,,
+CP-MATH,administrative_class,AC01,fixed,T-MATH-1,,,,
+CP-MATH,administrative_class,AC02,fixed,T-MATH-2,,,,
+CP-ENGLISH,administrative_class,AC01,fixed,T-ENG-1,,,,
+CP-ENGLISH,administrative_class,AC02,candidates,T-ENG-2;T-ENG-3,,,,
+CP-PHYSICS,teaching_section,SEC-PHY-1,fixed,T-PHY-1,,,,
+CP-CHEMISTRY,teaching_section,SEC-CHEM-1,candidates,T-CHEM-1;T-CHEM-2,,,,
+CP-BIOLOGY,teaching_section,SEC-BIO-1,fixed,T-BIO-1,,,,
+CP-HISTORY,teaching_section,SEC-HIS-1,fixed,T-HIS-1,,,,
+CP-POLITICS,teaching_section,SEC-POL-1,candidates,T-POL-1;T-POL-2,,,,
+CP-GEOGRAPHY,teaching_section,SEC-GEO-1,fixed,T-GEO-1,,,,

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimum core capability for the main local scheduling workbench.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

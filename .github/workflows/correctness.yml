@@ -1,0 +1,73 @@
+name: correctness
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  native_staging_boundaries:
+    name: Native staging boundaries and source inventory
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check portable archive, path, and license boundaries
+        run: python3 -m unittest discover -s scripts -p test_stage_macos_worker.py -v
+      - name: Check recorded dependency lockfile digests
+        run: |
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          inventory = json.loads(Path('third_party/dependency-license-inventory.json').read_text())
+          for name, expected in inventory['lockfiles'].items():
+              assert hashlib.sha256(Path(name).read_bytes()).hexdigest() == expected, name
+          PY
+  rust:
+    name: Rust 1.88 workspace gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Tauri Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            build-essential \
+            curl \
+            wget \
+            file \
+            protobuf-compiler \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+          protoc --version
+      - name: Run Rust format, lint, and tests
+        run: make rust-gate
+
+  frontend:
+    name: React strict build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.node-version
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type-check and build
+        run: npm run build
+      - name: Test import transport preparation and errors
+        run: npm test

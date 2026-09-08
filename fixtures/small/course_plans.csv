@@ -1,0 +1,10 @@
+course_plan_code,name,grade_code,subject_code,audience_kind,weekly_periods,meeting_pattern,min_days_between,max_periods_per_day,may_cross_breaks,required_room_features,teacher_assignment,teacher_codes,room_policy,room_candidates,preferred_rooms,fallback_rooms
+CP-CHINESE,语文,G12,chinese,administrative_class,4,1;1;1;1,1,1,false,multimedia,candidates,T-CHN-1;T-CHN-2,admin_home_room,,,
+CP-MATH,数学,G12,mathematics,administrative_class,4,1;1;1;1,1,1,false,multimedia,candidates,T-MATH-1;T-MATH-2,admin_home_room,,,
+CP-ENGLISH,英语,G12,english,administrative_class,3,1;1;1,1,1,false,multimedia,candidates,T-ENG-1;T-ENG-2;T-ENG-3,admin_home_room,,,
+CP-PHYSICS,物理,G12,physics,teaching_section,3,2;1,1,2,false,physics_lab;multimedia,candidates,T-PHY-1;T-PHY-2,,,,
+CP-CHEMISTRY,化学,G12,chemistry,teaching_section,3,2;1,1,2,false,chemistry_lab;multimedia,candidates,T-CHEM-1;T-CHEM-2,,,,
+CP-BIOLOGY,生物,G12,biology,teaching_section,2,1;1,1,1,false,biology_lab;multimedia,fixed,T-BIO-1,,,,
+CP-HISTORY,历史,G12,history,teaching_section,2,1;1,1,1,false,multimedia,fixed,T-HIS-1,,,,
+CP-POLITICS,思想政治,G12,politics,teaching_section,2,1;1,1,1,false,multimedia,candidates,T-POL-1;T-POL-2,,,,
+CP-GEOGRAPHY,地理,G12,geography,teaching_section,2,1;1,1,1,false,multimedia,fixed,T-GEO-1,,,,

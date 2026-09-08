@@ -1,0 +1,1221 @@
+{
+  "schemaVersion": 1,
+  "target": "aarch64-apple-darwin",
+  "distributionSha256": "de0400a45939a66ee13cd8360c230e830fc5e03a6ed5a8a8b60f58a39e4a67bc",
+  "auditDate": "2026-09-08",
+  "scope": "The actual 99-dylib dependency closure and one-shot worker from the pinned OR-Tools macOS archive; includes identified static/header/data dependencies. System libraries are excluded from redistribution.",
+  "status": "All 99 dylibs mapped; known version-matched notices and source references preserved; embedded HiGHS license provenance remains incomplete.",
+  "binaryRedistributionReady": false,
+  "limitations": [
+    {
+      "code": "HIGHS_CSPARSE_ATTRIBUTION_UNRESOLVED",
+      "detail": "HiGHS 1.12.0 includes cupdlp_cs.c whose source says it references Tim Davis SuiteSparse CSparse; real libhighs exports cupdlp_dcs_* symbols. Exact CSparse origin/version and its corresponding notice have not been established. A parent MIT license is not treated as proof of that embedded code license."
+    },
+    {
+      "code": "HIGHS_IPX_BASICLU_ORIGIN_UNRESOLVED",
+      "detail": "Real libhighs includes IPX and BASICLU. HiGHS source omits the license.txt referenced by IPX headers. Current official upstream candidates differ from the vendored files (IPX 0/69 exact; BASICLU 17/49 exact); their license texts are not substituted for an unverified historical revision."
+    }
+  ],
+  "sourceAccessStatement": "The identified third-party source is available under its own accompanying licenses at each immutable source URL and SHA256 listed below; OR-Tools patches are included locally and identify the modifications. EPL and MPL covered source is provided through these source references. Bell Apache-2.0 does not replace third-party licenses.",
+  "binaryModificationNotice": "Development staging changes only Mach-O dependency install names/RPATH/IDs and applies ad-hoc signatures to copied native artifacts. Original locked archive is preserved. No dependency source is edited by staging. See scripts/stage_macos_worker.py and each runtime manifest sourceSha256/sha256.",
+  "unicodeData": [
+    {
+      "component": "unicode-15.1.0",
+      "path": "ReadMe.txt",
+      "sourceUrl": "https://www.unicode.org/Public/15.1.0/ucd/ReadMe.txt",
+      "sha256": "0d2da782ead4e85630d510f50808355e8c3355e670841d257dd1e6fbd40db9fa"
+    },
+    {
+      "component": "unicode-15.1.0",
+      "path": "CaseFolding.txt",
+      "sourceUrl": "https://www.unicode.org/Public/15.1.0/ucd/CaseFolding.txt",
+      "sha256": "4e55acfdc32825a22e87670e9056a3bf94ad7c5400065778e9e10f8314372bcf"
+    },
+    {
+      "component": "unicode-15.1.0",
+      "path": "Scripts.txt",
+      "sourceUrl": "https://www.unicode.org/Public/15.1.0/ucd/Scripts.txt",
+      "sha256": "0eacb65169ae6eb1d399cd70826b3da15fff19f6f586eecf819b70c83b1d9b32"
+    },
+    {
+      "component": "unicode-15.1.0",
+      "path": "UnicodeData.txt",
+      "sourceUrl": "https://www.unicode.org/Public/15.1.0/ucd/UnicodeData.txt",
+      "sha256": "2fc713e6a31a87c4850a37fe2caffa4218180fadb5de86b43a143ddb4581fb86"
+    },
+    {
+      "component": "unicode-15.1.0",
+      "path": "LICENSE.txt",
+      "sourceUrl": "https://www.unicode.org/license.txt",
+      "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+    }
+  ],
+  "unicodeNotice": "RE2 source reads Unicode 15.1.0. The included official Unicode V3 notice was fetched in 2026; its copyright year is preserved and is not described as a historical 2023 file. Data URLs/hashes are pinned separately.",
+  "components": [
+    {
+      "id": "ortools",
+      "version": "9.15.6755",
+      "licenseExpression": "Apache-2.0",
+      "dylibs": [
+        "libortools.9.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "ortools/LICENSE"
+      ],
+      "source": {
+        "component": "ortools",
+        "repository": "google/or-tools",
+        "recipeRef": "v9.15",
+        "resolvedCommitAtAudit": "551ad10d94835c99e5e1e684500d3db398c0e345",
+        "sourceUrl": "https://codeload.github.com/google/or-tools/tar.gz/551ad10d94835c99e5e1e684500d3db398c0e345",
+        "sourceSha256": "df831c6f5cde1e407f0575b0260cc8b654f260ba49d2face535bb8ecbc904496"
+      },
+      "patchFiles": [],
+      "evidence": []
+    },
+    {
+      "id": "abseil",
+      "version": "20250814.1",
+      "licenseExpression": "Apache-2.0",
+      "dylibs": [
+        "libabsl_base.2508.0.0.dylib",
+        "libabsl_city.2508.0.0.dylib",
+        "libabsl_civil_time.2508.0.0.dylib",
+        "libabsl_cord.2508.0.0.dylib",
+        "libabsl_cord_internal.2508.0.0.dylib",
+        "libabsl_cordz_functions.2508.0.0.dylib",
+        "libabsl_cordz_handle.2508.0.0.dylib",
+        "libabsl_cordz_info.2508.0.0.dylib",
+        "libabsl_crc32c.2508.0.0.dylib",
+        "libabsl_crc_cord_state.2508.0.0.dylib",
+        "libabsl_crc_cpu_detect.2508.0.0.dylib",
+        "libabsl_crc_internal.2508.0.0.dylib",
+        "libabsl_debugging_internal.2508.0.0.dylib",
+        "libabsl_decode_rust_punycode.2508.0.0.dylib",
+        "libabsl_demangle_internal.2508.0.0.dylib",
+        "libabsl_demangle_rust.2508.0.0.dylib",
+        "libabsl_die_if_null.2508.0.0.dylib",
+        "libabsl_examine_stack.2508.0.0.dylib",
+        "libabsl_exponential_biased.2508.0.0.dylib",
+        "libabsl_flags_commandlineflag.2508.0.0.dylib",
+        "libabsl_flags_commandlineflag_internal.2508.0.0.dylib",
+        "libabsl_flags_config.2508.0.0.dylib",
+        "libabsl_flags_internal.2508.0.0.dylib",
+        "libabsl_flags_marshalling.2508.0.0.dylib",
+        "libabsl_flags_parse.2508.0.0.dylib",
+        "libabsl_flags_private_handle_accessor.2508.0.0.dylib",
+        "libabsl_flags_program_name.2508.0.0.dylib",
+        "libabsl_flags_reflection.2508.0.0.dylib",
+        "libabsl_flags_usage.2508.0.0.dylib",
+        "libabsl_flags_usage_internal.2508.0.0.dylib",
+        "libabsl_graphcycles_internal.2508.0.0.dylib",
+        "libabsl_hash.2508.0.0.dylib",
+        "libabsl_hashtablez_sampler.2508.0.0.dylib",
+        "libabsl_int128.2508.0.0.dylib",
+        "libabsl_kernel_timeout_internal.2508.0.0.dylib",
+        "libabsl_leak_check.2508.0.0.dylib",
+        "libabsl_log_entry.2508.0.0.dylib",
+        "libabsl_log_flags.2508.0.0.dylib",
+        "libabsl_log_globals.2508.0.0.dylib",
+        "libabsl_log_initialize.2508.0.0.dylib",
+        "libabsl_log_internal_check_op.2508.0.0.dylib",
+        "libabsl_log_internal_conditions.2508.0.0.dylib",
+        "libabsl_log_internal_fnmatch.2508.0.0.dylib",
+        "libabsl_log_internal_format.2508.0.0.dylib",
+        "libabsl_log_internal_globals.2508.0.0.dylib",
+        "libabsl_log_internal_log_sink_set.2508.0.0.dylib",
+        "libabsl_log_internal_message.2508.0.0.dylib",
+        "libabsl_log_internal_nullguard.2508.0.0.dylib",
+        "libabsl_log_internal_proto.2508.0.0.dylib",
+        "libabsl_log_internal_structured_proto.2508.0.0.dylib",
+        "libabsl_log_severity.2508.0.0.dylib",
+        "libabsl_log_sink.2508.0.0.dylib",
+        "libabsl_malloc_internal.2508.0.0.dylib",
+        "libabsl_random_distributions.2508.0.0.dylib",
+        "libabsl_random_internal_entropy_pool.2508.0.0.dylib",
+        "libabsl_random_internal_platform.2508.0.0.dylib",
+        "libabsl_random_internal_randen.2508.0.0.dylib",
+        "libabsl_random_internal_randen_hwaes.2508.0.0.dylib",
+        "libabsl_random_internal_randen_hwaes_impl.2508.0.0.dylib",
+        "libabsl_random_internal_randen_slow.2508.0.0.dylib",
+        "libabsl_random_internal_seed_material.2508.0.0.dylib",
+        "libabsl_random_seed_gen_exception.2508.0.0.dylib",
+        "libabsl_random_seed_sequences.2508.0.0.dylib",
+        "libabsl_raw_hash_set.2508.0.0.dylib",
+        "libabsl_raw_logging_internal.2508.0.0.dylib",
+        "libabsl_spinlock_wait.2508.0.0.dylib",
+        "libabsl_stacktrace.2508.0.0.dylib",
+        "libabsl_status.2508.0.0.dylib",
+        "libabsl_statusor.2508.0.0.dylib",
+        "libabsl_str_format_internal.2508.0.0.dylib",
+        "libabsl_strerror.2508.0.0.dylib",
+        "libabsl_string_view.2508.0.0.dylib",
+        "libabsl_strings.2508.0.0.dylib",
+        "libabsl_strings_internal.2508.0.0.dylib",
+        "libabsl_symbolize.2508.0.0.dylib",
+        "libabsl_synchronization.2508.0.0.dylib",
+        "libabsl_throw_delegate.2508.0.0.dylib",
+        "libabsl_time.2508.0.0.dylib",
+        "libabsl_time_zone.2508.0.0.dylib",
+        "libabsl_tracing_internal.2508.0.0.dylib",
+        "libabsl_utf8_for_code_point.2508.0.0.dylib",
+        "libabsl_vlog_config_internal.2508.0.0.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "abseil/LICENSE"
+      ],
+      "source": {
+        "component": "abseil",
+        "repository": "abseil/abseil-cpp",
+        "recipeRef": "20250814.1",
+        "resolvedCommitAtAudit": "d38452e1ee03523a208362186fd42248ff2609f6",
+        "sourceUrl": "https://codeload.github.com/abseil/abseil-cpp/tar.gz/d38452e1ee03523a208362186fd42248ff2609f6",
+        "sourceSha256": "d1abe9da2003e6cbbd7619b0ced3e52047422f4f4ac6c66a9bef5d2e99fea837"
+      },
+      "patchFiles": [
+        "ortools/patches/abseil-cpp-20250814.1.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-version",
+          "path": "include/absl/base/config.h",
+          "value": "ABSL_LTS_RELEASE_VERSION=20250814; ABSL_LTS_RELEASE_PATCH_LEVEL=1; 311 unique headers equal; flags/declare.h and base/options.h differ as configured/patched"
+        }
+      ]
+    },
+    {
+      "id": "protobuf",
+      "version": "33.1",
+      "licenseExpression": "BSD-3-Clause",
+      "dylibs": [
+        "libprotobuf.33.1.0.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "protobuf/LICENSE"
+      ],
+      "source": {
+        "component": "protobuf",
+        "repository": "protocolbuffers/protobuf",
+        "recipeRef": "v33.1",
+        "resolvedCommitAtAudit": "a8d85ffbc7158660b4247f732371d1b07780510e",
+        "sourceUrl": "https://codeload.github.com/protocolbuffers/protobuf/tar.gz/a8d85ffbc7158660b4247f732371d1b07780510e",
+        "sourceSha256": "70b991f2e16f38a62592ce2e2f083129fa3b0d48de497d37cd3c5df88245bc97"
+      },
+      "patchFiles": [
+        "ortools/patches/protobuf-v33.1.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 114,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ]
+    },
+    {
+      "id": "re2",
+      "version": "2025-08-12 (SONAME 11.0.0)",
+      "licenseExpression": "BSD-3-Clause AND Unicode-3.0",
+      "dylibs": [
+        "libre2.11.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "re2/LICENSE",
+        "unicode-15.1.0/LICENSE.txt",
+        "unicode-15.1.0/ReadMe.txt"
+      ],
+      "source": {
+        "component": "re2",
+        "repository": "google/re2",
+        "recipeRef": "2025-08-12",
+        "resolvedCommitAtAudit": "0f6c07eae69151e606acb3d9232750c3442dff23",
+        "sourceUrl": "https://codeload.github.com/google/re2/tar.gz/0f6c07eae69151e606acb3d9232750c3442dff23",
+        "sourceSha256": "c3b1684ccfa80d21eec461ed8d610e7f371c07d3089959da2766110a4e5caf69"
+      },
+      "patchFiles": [
+        "ortools/patches/re2-2025-08-12.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 4,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ]
+    },
+    {
+      "id": "highs",
+      "version": "1.12.0",
+      "licenseExpression": "NOASSERTION",
+      "dylibs": [
+        "libhighs.1.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "highs/LICENSE.txt",
+        "highs/extern/filereaderlp/LICENSE",
+        "highs/extern/pdqsort/license.txt",
+        "highs/highs/pdlp/cupdlp/README.md",
+        "highs/extern/zstr/README",
+        "cupdlp/LICENSE",
+        "zstr/LICENSE"
+      ],
+      "source": {
+        "component": "highs",
+        "repository": "ERGO-Code/HiGHS",
+        "recipeRef": "v1.12.0",
+        "resolvedCommitAtAudit": "755a8e027a99a8d4ecf153a8dde4b2a767cdf384",
+        "sourceUrl": "https://codeload.github.com/ERGO-Code/HiGHS/tar.gz/755a8e027a99a8d4ecf153a8dde4b2a767cdf384",
+        "sourceSha256": "fa93deede022b0a7accca8bb4caffe7d7d5e47c0902f6156de1326be9499caa5"
+      },
+      "patchFiles": [],
+      "evidence": [
+        {
+          "kind": "installed-header-commit",
+          "path": "include/highs/HConfig.h",
+          "value": "HIGHS_GITHASH=755a8e02; version 1.12.0"
+        }
+      ],
+      "embedded": [
+        {
+          "id": "cupdlp",
+          "origin": {
+            "component": "cupdlp",
+            "repository": "COPT-Public/cuPDLP-C",
+            "recipeRef": "7b94c41efca42fa176a129a935b59718e1455fad",
+            "resolvedCommitAtAudit": "7b94c41efca42fa176a129a935b59718e1455fad",
+            "sourceUrl": "https://codeload.github.com/COPT-Public/cuPDLP-C/tar.gz/7b94c41efca42fa176a129a935b59718e1455fad",
+            "sourceSha256": "95ccef7aaac1b22967da9e6506710e80435f100bdd0908f3c1c5f9c0e8dc7a00"
+          },
+          "evidence": "HiGHS highs/pdlp/cupdlp/README.md records this exact source commit; binary exports cupdlp_dcs_*",
+          "licenseFiles": [
+            "cupdlp/LICENSE"
+          ],
+          "status": "primary MIT text included; CSparse-derived attribution remains unresolved"
+        },
+        {
+          "id": "zstr",
+          "version": "1.0.5 with HiGHS edits",
+          "origin": {
+            "component": "zstr",
+            "repository": "mateidavid/zstr",
+            "recipeRef": "v1.0.5",
+            "resolvedCommitAtAudit": "93cfe0a8cead9cdebe06ecff602baca5bd043abe",
+            "sourceUrl": "https://codeload.github.com/mateidavid/zstr/tar.gz/93cfe0a8cead9cdebe06ecff602baca5bd043abe",
+            "sourceSha256": "d4038851f371b211e22c08757e92d945b7deac9b53964b228677a59035ac94dd"
+          },
+          "evidence": "HiGHS extern/zstr/README explicitly names 1.0.5 and MIT",
+          "licenseFiles": [
+            "zstr/LICENSE"
+          ]
+        },
+        {
+          "id": "pdqsort",
+          "version": "vendored in HiGHS 1.12.0",
+          "licenseFiles": [
+            "highs/extern/pdqsort/license.txt"
+          ],
+          "licenseExpression": "Zlib"
+        },
+        {
+          "id": "filereaderlp",
+          "version": "vendored in HiGHS 1.12.0",
+          "licenseFiles": [
+            "highs/extern/filereaderlp/LICENSE"
+          ],
+          "licenseExpression": "MIT"
+        },
+        {
+          "id": "basiclu",
+          "version": "vendored in HiGHS 1.12.0; standalone upstream revision not established",
+          "candidateSource": {
+            "component": "basiclu",
+            "repository": "ERGO-Code/basiclu",
+            "recipeRef": "master",
+            "resolvedCommitAtAudit": "a2828782151288efa5e2cb2e0c1ac21925ed9db9",
+            "sourceUrl": "https://codeload.github.com/ERGO-Code/basiclu/tar.gz/a2828782151288efa5e2cb2e0c1ac21925ed9db9",
+            "sourceSha256": "53880c7d26ef441b5b10a4b4b624e73681fdcd94abac9a433dc01873a1715b09"
+          },
+          "candidateLicense": {
+            "path": "LICENSE",
+            "sizeBytes": 3398,
+            "sha256": "5e33126f0888989c8ff1f74effc7228a2b8e1d1e46e078e82a74137c74ff90ed"
+          },
+          "evidence": {
+            "equalVendoredFiles": 17,
+            "changedVendoredFiles": 32
+          },
+          "status": "candidate only; not presented as the license for the historical vendored revision"
+        },
+        {
+          "id": "ipx",
+          "version": "vendored in HiGHS 1.12.0; standalone upstream revision not established",
+          "candidateSource": {
+            "component": "ipx",
+            "repository": "ERGO-Code/ipx",
+            "recipeRef": "master",
+            "resolvedCommitAtAudit": "e6cbac171d42bbb9b3c01b382a1c3392d84d0ce3",
+            "sourceUrl": "https://codeload.github.com/ERGO-Code/ipx/tar.gz/e6cbac171d42bbb9b3c01b382a1c3392d84d0ce3",
+            "sourceSha256": "5f71d60d774358e04ac17425843f55a00cee0de9515d074fb30be11c9269f57f"
+          },
+          "candidateLicense": {
+            "path": "LICENSE",
+            "sizeBytes": 3127,
+            "sha256": "51d39f4b00c0a6a1229dfadf4ff65bf9cb92fbc6463aaf9f9ba5db73edcac3a3"
+          },
+          "evidence": {
+            "equalVendoredFiles": 0,
+            "changedVendoredFiles": 69
+          },
+          "status": "candidate only; not presented as the license for the historical vendored revision"
+        }
+      ],
+      "notes": [
+        "Root HiGHS and cuPDLP MIT licenses do not close the unresolved embedded-source attribution. NOASSERTION concerns the whole native library, not the known primary MIT code."
+      ]
+    },
+    {
+      "id": "boost",
+      "version": "1.87.0",
+      "licenseExpression": "BSL-1.0",
+      "dylibs": [],
+      "linkage": "embedded",
+      "licenseFiles": [
+        "boost/LICENSE_1_0.txt"
+      ],
+      "source": {
+        "component": "boost",
+        "repository": "boostorg/boost",
+        "recipeRef": "boost-1.87.0",
+        "resolvedCommitAtAudit": "c89e6267665516192015a9e40955e154466f4f68",
+        "sourceUrl": "https://codeload.github.com/boostorg/boost/tar.gz/c89e6267665516192015a9e40955e154466f4f68",
+        "sourceSha256": "d4a2dd3495117f65ec5fa95de9c13cd5cfab1d1e37a5d5732ff21f5614840747"
+      },
+      "patchFiles": [
+        "ortools/patches/boost-1.87.0.patch"
+      ],
+      "evidence": [],
+      "completeSource": {
+        "url": "https://archives.boost.io/release/1.87.0/source/boost_1_87_0.tar.gz",
+        "sha256": "f55c340aa49763b1925ccf02b2e83f35fdcf634c9d5164a2acb87540173c741d",
+        "checksumOrigin": "https://archives.boost.io/release/1.87.0/source/boost_1_87_0.tar.gz.json",
+        "verification": "publisher checksum metadata fetched; complete archive not downloaded in this audit"
+      },
+      "notes": [
+        "Static/header-only Boost multiprecision and serialization are declared by the installed SoPlex CMake target. Superproject source reference alone omits submodules; use completeSource."
+      ]
+    },
+    {
+      "id": "scip",
+      "version": "10.0.0",
+      "licenseExpression": "Apache-2.0 AND Zlib",
+      "dylibs": [
+        "libscip.10.0.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "scip/LICENSE",
+        "scip/src/tclique/LICENSE",
+        "scip/src/tinycthread/COPYRIGHT"
+      ],
+      "source": {
+        "component": "scip",
+        "repository": "scipopt/scip",
+        "recipeRef": "v10.0.0",
+        "resolvedCommitAtAudit": "0c80fdd8e91d7d9f23c0c7a55b68884209d5f27c",
+        "sourceUrl": "https://codeload.github.com/scipopt/scip/tar.gz/0c80fdd8e91d7d9f23c0c7a55b68884209d5f27c",
+        "sourceSha256": "1f149c6d30443193c0e8bae4cba9929a43d2bb35c8952d18a44bb23193d7312c"
+      },
+      "patchFiles": [
+        "ortools/patches/scip-v10.0.0.patch"
+      ],
+      "evidence": [],
+      "notes": [
+        "Installed config and real binary identify SCIP 10.0.0. tclique is Apache-2.0; TinyCThread copyright is preserved. SoPlex symbols and version 8.0.0 are embedded in libscip, recorded as a separate component. Disabled AMPL/CppAD/nauty/dejavu are not claimed as part of this binary."
+      ]
+    },
+    {
+      "id": "soplex",
+      "version": "8.0.0",
+      "licenseExpression": "Apache-2.0 AND MIT",
+      "dylibs": [],
+      "linkage": "embedded",
+      "licenseFiles": [
+        "soplex/LICENSE",
+        "soplex/src/soplex/external/fmt/LICENSE.rst",
+        "soplex/src/soplex/external/zstr/License.txt"
+      ],
+      "source": {
+        "component": "soplex",
+        "repository": "scipopt/soplex",
+        "recipeRef": "v8.0.0",
+        "resolvedCommitAtAudit": "2207cfb274dbce5c2644911dd621438535733607",
+        "sourceUrl": "https://codeload.github.com/scipopt/soplex/tar.gz/2207cfb274dbce5c2644911dd621438535733607",
+        "sourceSha256": "a5719b584d1995582812ad0ec72ddfca2c0441f2ff16da69eee72d1dc65031df"
+      },
+      "patchFiles": [
+        "ortools/patches/soplex-v8.0.0.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 156,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ],
+      "notes": [
+        "Real libscip contains SoPlex 8.0.0 symbols/strings; installed static libsoplex and all 156 compared headers match. Vendored fmt/zstr licenses are taken from the same SoPlex tag and match archive notices."
+      ]
+    },
+    {
+      "id": "coinutils",
+      "version": "2.11.12",
+      "licenseExpression": "EPL-1.0 AND EPL-2.0",
+      "dylibs": [
+        "libCoinUtils.2.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "coinutils/LICENSE",
+        "coinutils/CoinUtils/LICENSE"
+      ],
+      "source": {
+        "component": "coinutils",
+        "repository": "Mizux/CoinUtils",
+        "recipeRef": "cmake/2.11.12",
+        "resolvedCommitAtAudit": "6fc9606ffd6b2120ba211bfec6fe99ab3db5dfd6",
+        "sourceUrl": "https://codeload.github.com/Mizux/CoinUtils/tar.gz/6fc9606ffd6b2120ba211bfec6fe99ab3db5dfd6",
+        "sourceSha256": "8c6eb442942edb1da0a150c6b92112c9e34b5f6144067a35891c34f5c368e96d"
+      },
+      "patchFiles": [
+        "ortools/patches/coinutils-2.11.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 60,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ],
+      "notes": [
+        "Actual OR-Tools recipe uses the Mizux CMake fork. Core subdirectory LICENSE is EPL-1.0; fork root LICENSE is EPL-2.0. Both texts and the actual fork source plus OR-Tools CMake patch are provided; no relicensing claim."
+      ]
+    },
+    {
+      "id": "osi",
+      "version": "0.108.11",
+      "licenseExpression": "EPL-1.0 AND EPL-2.0",
+      "dylibs": [
+        "libOsi.0.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "osi/LICENSE",
+        "osi/Osi/LICENSE"
+      ],
+      "source": {
+        "component": "osi",
+        "repository": "Mizux/Osi",
+        "recipeRef": "cmake/0.108.11",
+        "resolvedCommitAtAudit": "ab3d7568384854c7c2bcd53f608c7b4b31a3f033",
+        "sourceUrl": "https://codeload.github.com/Mizux/Osi/tar.gz/ab3d7568384854c7c2bcd53f608c7b4b31a3f033",
+        "sourceSha256": "58c3400d17cf0b7a0cdf5d6014dc3005b050f6a7063f3c8e930811fc7ec391fb"
+      },
+      "patchFiles": [
+        "ortools/patches/osi-0.108.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 14,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ],
+      "notes": [
+        "Actual OR-Tools recipe uses the Mizux CMake fork. Core subdirectory LICENSE is EPL-1.0; fork root LICENSE is EPL-2.0. Both texts and the actual fork source plus OR-Tools CMake patch are provided; no relicensing claim."
+      ]
+    },
+    {
+      "id": "clp",
+      "version": "1.17.10",
+      "licenseExpression": "EPL-1.0 AND EPL-2.0",
+      "dylibs": [
+        "libClp.1.dylib",
+        "libClpSolver.1.dylib",
+        "libOsiClp.1.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "clp/LICENSE",
+        "clp/Clp/LICENSE"
+      ],
+      "source": {
+        "component": "clp",
+        "repository": "Mizux/Clp",
+        "recipeRef": "cmake/1.17.10",
+        "resolvedCommitAtAudit": "14ab15c7dfc59b6bdb5455d42a2d5e9e1ec28a75",
+        "sourceUrl": "https://codeload.github.com/Mizux/Clp/tar.gz/14ab15c7dfc59b6bdb5455d42a2d5e9e1ec28a75",
+        "sourceSha256": "8674653bc8f64dbc8a1f77e3cb3ac0c996672fc45f3d61670caeec694a9d8fc2"
+      },
+      "patchFiles": [
+        "ortools/patches/clp-1.17.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 53,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ],
+      "notes": [
+        "Actual OR-Tools recipe uses the Mizux CMake fork. Core subdirectory LICENSE is EPL-1.0; fork root LICENSE is EPL-2.0. Both texts and the actual fork source plus OR-Tools CMake patch are provided; no relicensing claim."
+      ]
+    },
+    {
+      "id": "cgl",
+      "version": "0.60.9",
+      "licenseExpression": "EPL-1.0 AND EPL-2.0",
+      "dylibs": [
+        "libCgl.0.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "cgl/LICENSE",
+        "cgl/Cgl/LICENSE"
+      ],
+      "source": {
+        "component": "cgl",
+        "repository": "Mizux/Cgl",
+        "recipeRef": "cmake/0.60.9",
+        "resolvedCommitAtAudit": "75d3994612b992a48574d297479d8aede41611a2",
+        "sourceUrl": "https://codeload.github.com/Mizux/Cgl/tar.gz/75d3994612b992a48574d297479d8aede41611a2",
+        "sourceSha256": "070a456933b7789fc524e67691704167d878173561f83c0366c2d411cfdb1581"
+      },
+      "patchFiles": [
+        "ortools/patches/cgl-0.60.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 35,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ],
+      "notes": [
+        "Actual OR-Tools recipe uses the Mizux CMake fork. Core subdirectory LICENSE is EPL-1.0; fork root LICENSE is EPL-2.0. Both texts and the actual fork source plus OR-Tools CMake patch are provided; no relicensing claim."
+      ]
+    },
+    {
+      "id": "cbc",
+      "version": "2.10.12",
+      "licenseExpression": "EPL-1.0 AND EPL-2.0",
+      "dylibs": [
+        "libCbc.2.dylib",
+        "libCbcSolver.2.dylib",
+        "libOsiCbc.2.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "cbc/LICENSE",
+        "cbc/Cbc/LICENSE"
+      ],
+      "source": {
+        "component": "cbc",
+        "repository": "Mizux/Cbc",
+        "recipeRef": "cmake/2.10.12",
+        "resolvedCommitAtAudit": "61358ddd277362186547caff464f2266c26ced10",
+        "sourceUrl": "https://codeload.github.com/Mizux/Cbc/tar.gz/61358ddd277362186547caff464f2266c26ced10",
+        "sourceSha256": "ba17a8585644ecddeea30e9ce36f55f5a149d9df648ad79673c0fc12bb41196e"
+      },
+      "patchFiles": [
+        "ortools/patches/cbc-2.10.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 77,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ],
+      "notes": [
+        "Actual OR-Tools recipe uses the Mizux CMake fork. Core subdirectory LICENSE is EPL-1.0; fork root LICENSE is EPL-2.0. Both texts and the actual fork source plus OR-Tools CMake patch are provided; no relicensing claim."
+      ]
+    },
+    {
+      "id": "zlib",
+      "version": "1.3.1",
+      "licenseExpression": "Zlib",
+      "dylibs": [
+        "libz.1.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "zlib/LICENSE"
+      ],
+      "source": {
+        "component": "zlib",
+        "repository": "madler/zlib",
+        "recipeRef": "v1.3.1",
+        "resolvedCommitAtAudit": "51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf",
+        "sourceUrl": "https://codeload.github.com/madler/zlib/tar.gz/51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf",
+        "sourceSha256": "d9e270d46252734aa49770fbc544125391617956266f220bd63216c834f3a522"
+      },
+      "patchFiles": [
+        "ortools/patches/ZLIB-v1.3.1.patch"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "eigen",
+      "version": "3.4.0",
+      "licenseExpression": "MPL-2.0",
+      "dylibs": [],
+      "linkage": "embedded",
+      "licenseFiles": [
+        "eigen/COPYING.MPL2",
+        "eigen/COPYING.BSD",
+        "eigen/COPYING.APACHE",
+        "eigen/COPYING.MINPACK",
+        "eigen/COPYING.README"
+      ],
+      "source": {
+        "component": "eigen",
+        "repository": "libeigen/eigen",
+        "recipeRef": "3.4.0",
+        "resolvedCommitAtAudit": "3147391d946bb4b6c68edd901f2add6ac1f31f8c",
+        "sourceUrl": "https://gitlab.com/libeigen/eigen/-/archive/3147391d946bb4b6c68edd901f2add6ac1f31f8c/eigen-3147391d946bb4b6c68edd901f2add6ac1f31f8c.tar.gz",
+        "sourceSha256": "0c8c490764f9c2a793133491adca0cd073b73e0bde965c68cbe58d91b5ed4261"
+      },
+      "patchFiles": [
+        "ortools/patches/eigen3-3.4.0.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "installed-header-byte-comparison",
+          "equalHeaders": 421,
+          "differentComparedHeaders": 0,
+          "method": "unique header basename within this upstream source archive; compare original installed bytes"
+        }
+      ],
+      "notes": [
+        "Installed share/eigen3/cmake/Eigen3Targets.cmake exports EIGEN_MPL2_ONLY. MPL2 plus permissive companion notices included; no LGPL/GPL Eigen modules asserted. Exact source and OR-Tools CMake patch are provided."
+      ]
+    },
+    {
+      "id": "bzip2",
+      "version": "1.1.0 development (libtool 1.0.9)",
+      "licenseExpression": "bzip2-1.0.6",
+      "dylibs": [
+        "libbz2.1.dylib"
+      ],
+      "linkage": "dynamic",
+      "licenseFiles": [
+        "bzip2/COPYING",
+        "bzip2/README.md"
+      ],
+      "source": {
+        "component": "bzip2",
+        "repository": "bzip2/bzip2",
+        "recipeRef": "master",
+        "resolvedCommitAtAudit": "66c46b8c9436613fd81bc5d03f63a61933a4dcc3",
+        "sourceUrl": "https://gitlab.com/bzip2/bzip2/-/archive/66c46b8c9436613fd81bc5d03f63a61933a4dcc3/bzip2-66c46b8c9436613fd81bc5d03f63a61933a4dcc3.tar.gz",
+        "sourceSha256": "3a4cff5f9d197e9e6c6138660afa6b1f9370df0bed135bd949243f6dfc83b3e1"
+      },
+      "patchFiles": [
+        "ortools/patches/bzip2.patch"
+      ],
+      "evidence": [
+        {
+          "kind": "header-and-build-version",
+          "path": "include/bzlib.h",
+          "sha256": "5e1b60c089fff34cb3def3ea2c0f799be74879dc7661114bbe904273fed05f8b",
+          "value": "byte-identical to archived official master; source CMake version 1.1.0 and LT_CURRENT=1 LT_REVISION=9 LT_AGE=0; dylib contains 1.1.0"
+        }
+      ],
+      "notes": [
+        "SPDX license ID bzip2-1.0.6 names the license text family, not this binary version. This is the archived feature-development repository, not the sourceware 1.0.8 release. OR-Tools recipe used master; audited archived head was authored 2023-05-31."
+      ]
+    },
+    {
+      "id": "utf8-range",
+      "version": "vendored in Protobuf 33.1; dylib 33.1.0",
+      "licenseExpression": "MIT",
+      "linkage": "dynamic",
+      "dylibs": [
+        "libutf8_validity.33.1.0.dylib"
+      ],
+      "licenseFiles": [
+        "protobuf/third_party/utf8_range/LICENSE"
+      ],
+      "source": {
+        "component": "protobuf",
+        "repository": "protocolbuffers/protobuf",
+        "recipeRef": "v33.1",
+        "resolvedCommitAtAudit": "a8d85ffbc7158660b4247f732371d1b07780510e",
+        "sourceUrl": "https://codeload.github.com/protocolbuffers/protobuf/tar.gz/a8d85ffbc7158660b4247f732371d1b07780510e",
+        "sourceSha256": "70b991f2e16f38a62592ce2e2f083129fa3b0d48de497d37cd3c5df88245bc97"
+      }
+    },
+    {
+      "id": "bell-worker",
+      "version": "adapter 0.1.0",
+      "licenseExpression": "Apache-2.0",
+      "linkage": "worker",
+      "dylibs": [],
+      "licenseFiles": [
+        "bell/LICENSE"
+      ],
+      "source": {
+        "repositoryPath": "solver/ortools-worker",
+        "protocolPath": "crates/solver-contract/proto/scheduler/v1/solver.proto",
+        "sourceReleaseTag": "v0.1.0-alpha.1"
+      },
+      "notes": [
+        "This repository owns the worker source. The generated install manifest records every worker/protocol source SHA256 and the final binary hash."
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "abseil/LICENSE",
+      "sha256": "c79a7fea0e3cac04cd43f20e7b648e5a0ff8fa5344e644b0ee09ca1162b62747",
+      "sourceUrl": "https://raw.githubusercontent.com/abseil/abseil-cpp/d38452e1ee03523a208362186fd42248ff2609f6/LICENSE",
+      "sourceFileSha256": "c79a7fea0e3cac04cd43f20e7b648e5a0ff8fa5344e644b0ee09ca1162b62747",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "bell/LICENSE",
+      "sha256": "c95bae1d1ce0235ecccd3560b772ec1efb97f348a79f0fbe0a634f0c2ccefe2c",
+      "sourcePath": "LICENSE",
+      "sourceFileSha256": "c95bae1d1ce0235ecccd3560b772ec1efb97f348a79f0fbe0a634f0c2ccefe2c",
+      "kind": "notice"
+    },
+    {
+      "path": "boost/LICENSE_1_0.txt",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+      "sourceUrl": "https://raw.githubusercontent.com/boostorg/boost/c89e6267665516192015a9e40955e154466f4f68/LICENSE_1_0.txt",
+      "sourceFileSha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+      "sourcePath": "LICENSE_1_0.txt",
+      "kind": "notice"
+    },
+    {
+      "path": "bzip2/COPYING",
+      "sha256": "452871c08826ffb38b1a77960f23ef9c4b8b457887c3a6b691b7d42e882426e3",
+      "sourceUrl": "https://gitlab.com/bzip2/bzip2/-/raw/66c46b8c9436613fd81bc5d03f63a61933a4dcc3/COPYING",
+      "sourceFileSha256": "452871c08826ffb38b1a77960f23ef9c4b8b457887c3a6b691b7d42e882426e3",
+      "sourcePath": "COPYING",
+      "kind": "notice"
+    },
+    {
+      "path": "bzip2/README.md",
+      "sha256": "c543af7cd08aa1ff64c015c029e22acfc16d442abaec9a1555957136e689da61",
+      "sourceUrl": "https://gitlab.com/bzip2/bzip2/-/raw/66c46b8c9436613fd81bc5d03f63a61933a4dcc3/README.md",
+      "sourceFileSha256": "c543af7cd08aa1ff64c015c029e22acfc16d442abaec9a1555957136e689da61",
+      "sourcePath": "README.md",
+      "kind": "notice"
+    },
+    {
+      "path": "cbc/Cbc/LICENSE",
+      "sha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/Cbc/61358ddd277362186547caff464f2266c26ced10/Cbc/LICENSE",
+      "sourceFileSha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourcePath": "Cbc/LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "cbc/LICENSE",
+      "sha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/Cbc/61358ddd277362186547caff464f2266c26ced10/LICENSE",
+      "sourceFileSha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "cgl/Cgl/LICENSE",
+      "sha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/Cgl/75d3994612b992a48574d297479d8aede41611a2/Cgl/LICENSE",
+      "sourceFileSha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourcePath": "Cgl/LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "cgl/LICENSE",
+      "sha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/Cgl/75d3994612b992a48574d297479d8aede41611a2/LICENSE",
+      "sourceFileSha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "clp/Clp/LICENSE",
+      "sha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/Clp/14ab15c7dfc59b6bdb5455d42a2d5e9e1ec28a75/Clp/LICENSE",
+      "sourceFileSha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourcePath": "Clp/LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "clp/LICENSE",
+      "sha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/Clp/14ab15c7dfc59b6bdb5455d42a2d5e9e1ec28a75/LICENSE",
+      "sourceFileSha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "coinutils/CoinUtils/LICENSE",
+      "sha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/CoinUtils/6fc9606ffd6b2120ba211bfec6fe99ab3db5dfd6/CoinUtils/LICENSE",
+      "sourceFileSha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourcePath": "CoinUtils/LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "coinutils/LICENSE",
+      "sha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/CoinUtils/6fc9606ffd6b2120ba211bfec6fe99ab3db5dfd6/LICENSE",
+      "sourceFileSha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "cupdlp/LICENSE",
+      "sha256": "41c622a03c428fa0ead1fd81ff7c2bbd84dab7c852ad83e11920ca0e64945ab4",
+      "sourceUrl": "https://raw.githubusercontent.com/COPT-Public/cuPDLP-C/7b94c41efca42fa176a129a935b59718e1455fad/LICENSE",
+      "sourceFileSha256": "41c622a03c428fa0ead1fd81ff7c2bbd84dab7c852ad83e11920ca0e64945ab4",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "eigen/COPYING.APACHE",
+      "sha256": "8fae83faf0810de83f32636b2c97aaddaf7ae95008456e1e7f87cc6748214e95",
+      "sourceUrl": "https://gitlab.com/libeigen/eigen/-/raw/3147391d946bb4b6c68edd901f2add6ac1f31f8c/COPYING.APACHE",
+      "sourceFileSha256": "03379001a7b12a2ec997a25554247d985270b353c10d5bafee9ac8d6519820b7",
+      "sourcePath": "COPYING.APACHE",
+      "kind": "notice",
+      "textNormalization": "CRLF to LF; final LF ensured"
+    },
+    {
+      "path": "eigen/COPYING.BSD",
+      "sha256": "51928dce36213c5333ba3172e847d735d4c6e9b7ff2722a326c49067155b82eb",
+      "sourceUrl": "https://gitlab.com/libeigen/eigen/-/raw/3147391d946bb4b6c68edd901f2add6ac1f31f8c/COPYING.BSD",
+      "sourceFileSha256": "51928dce36213c5333ba3172e847d735d4c6e9b7ff2722a326c49067155b82eb",
+      "sourcePath": "COPYING.BSD",
+      "kind": "notice"
+    },
+    {
+      "path": "eigen/COPYING.MINPACK",
+      "sha256": "c87b7f8ee88f6195e91743820c00354833583aef091b72e2d4a49c8e28e798a0",
+      "sourceUrl": "https://gitlab.com/libeigen/eigen/-/raw/3147391d946bb4b6c68edd901f2add6ac1f31f8c/COPYING.MINPACK",
+      "sourceFileSha256": "c87b7f8ee88f6195e91743820c00354833583aef091b72e2d4a49c8e28e798a0",
+      "sourcePath": "COPYING.MINPACK",
+      "kind": "notice"
+    },
+    {
+      "path": "eigen/COPYING.MPL2",
+      "sha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
+      "sourceUrl": "https://gitlab.com/libeigen/eigen/-/raw/3147391d946bb4b6c68edd901f2add6ac1f31f8c/COPYING.MPL2",
+      "sourceFileSha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
+      "sourcePath": "COPYING.MPL2",
+      "kind": "notice"
+    },
+    {
+      "path": "eigen/COPYING.README",
+      "sha256": "c83230b770f17ef1386ea1fd3681271dd98aa93646bdbfb5bff3a1b7050fff9d",
+      "sourceUrl": "https://gitlab.com/libeigen/eigen/-/raw/3147391d946bb4b6c68edd901f2add6ac1f31f8c/COPYING.README",
+      "sourceFileSha256": "c83230b770f17ef1386ea1fd3681271dd98aa93646bdbfb5bff3a1b7050fff9d",
+      "sourcePath": "COPYING.README",
+      "kind": "notice"
+    },
+    {
+      "path": "highs/LICENSE.txt",
+      "sha256": "10b39dba7b7731175f0705398b6db4320b64add1bd2ed9f9ec5b512a9ef1bd95",
+      "sourceUrl": "https://raw.githubusercontent.com/ERGO-Code/HiGHS/755a8e027a99a8d4ecf153a8dde4b2a767cdf384/LICENSE.txt",
+      "sourceFileSha256": "10b39dba7b7731175f0705398b6db4320b64add1bd2ed9f9ec5b512a9ef1bd95",
+      "sourcePath": "LICENSE.txt",
+      "kind": "notice"
+    },
+    {
+      "path": "highs/extern/filereaderlp/LICENSE",
+      "sha256": "4374bb8064e5302f5ac6b82fd3e153a36670f04d0a6ee1bc55b3dc3faee923cc",
+      "sourceUrl": "https://raw.githubusercontent.com/ERGO-Code/HiGHS/755a8e027a99a8d4ecf153a8dde4b2a767cdf384/extern/filereaderlp/LICENSE",
+      "sourceFileSha256": "4374bb8064e5302f5ac6b82fd3e153a36670f04d0a6ee1bc55b3dc3faee923cc",
+      "sourcePath": "extern/filereaderlp/LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "highs/extern/pdqsort/license.txt",
+      "sha256": "323fc18e35fcf058d69d684022ef844f206cb8fefb2bac1298fa1767e0b9ae38",
+      "sourceUrl": "https://raw.githubusercontent.com/ERGO-Code/HiGHS/755a8e027a99a8d4ecf153a8dde4b2a767cdf384/extern/pdqsort/license.txt",
+      "sourceFileSha256": "323fc18e35fcf058d69d684022ef844f206cb8fefb2bac1298fa1767e0b9ae38",
+      "sourcePath": "extern/pdqsort/license.txt",
+      "kind": "notice"
+    },
+    {
+      "path": "highs/extern/zstr/README",
+      "sha256": "80e87c7fd33db1a06621b96146db8129c99425bc0cd4ef49035fa93753ceb462",
+      "sourceUrl": "https://raw.githubusercontent.com/ERGO-Code/HiGHS/755a8e027a99a8d4ecf153a8dde4b2a767cdf384/extern/zstr/README",
+      "sourceFileSha256": "80e87c7fd33db1a06621b96146db8129c99425bc0cd4ef49035fa93753ceb462",
+      "sourcePath": "extern/zstr/README",
+      "kind": "notice"
+    },
+    {
+      "path": "highs/highs/pdlp/cupdlp/README.md",
+      "sha256": "a8164ab6005666e8e7c81871c13f5ee049a9c1f078e7f27bf5c26298eeca5b96",
+      "sourceUrl": "https://raw.githubusercontent.com/ERGO-Code/HiGHS/755a8e027a99a8d4ecf153a8dde4b2a767cdf384/highs/pdlp/cupdlp/README.md",
+      "sourceFileSha256": "a8164ab6005666e8e7c81871c13f5ee049a9c1f078e7f27bf5c26298eeca5b96",
+      "sourcePath": "highs/pdlp/cupdlp/README.md",
+      "kind": "notice"
+    },
+    {
+      "path": "ortools/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/LICENSE",
+      "sourceFileSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "ortools/patches/ZLIB-v1.3.1.patch",
+      "sha256": "0724f3600f084e4a45347f1ae48ba83915eb3995e533342cd6d262c073b742c9",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/ZLIB-v1.3.1.patch",
+      "sourceFileSha256": "0724f3600f084e4a45347f1ae48ba83915eb3995e533342cd6d262c073b742c9",
+      "sourcePath": "patches/ZLIB-v1.3.1.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/abseil-cpp-20250814.1.patch",
+      "sha256": "9e4c21057f98eac2f38a20b57f75d598761d9348562a8d55058482f948cf1ec0",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/abseil-cpp-20250814.1.patch",
+      "sourceFileSha256": "9e4c21057f98eac2f38a20b57f75d598761d9348562a8d55058482f948cf1ec0",
+      "sourcePath": "patches/abseil-cpp-20250814.1.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/boost-1.87.0.patch",
+      "sha256": "471989d8985e2359a9e2bfaceebea8c468c07754a55a8c1c779454e031be970f",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/boost-1.87.0.patch",
+      "sourceFileSha256": "471989d8985e2359a9e2bfaceebea8c468c07754a55a8c1c779454e031be970f",
+      "sourcePath": "patches/boost-1.87.0.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/bzip2.patch",
+      "sha256": "6264633cd01ce8ad7e685d74352f38e0108b1b80e1471ac4ea6a04fb402f7f89",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/bzip2.patch",
+      "sourceFileSha256": "6264633cd01ce8ad7e685d74352f38e0108b1b80e1471ac4ea6a04fb402f7f89",
+      "sourcePath": "patches/bzip2.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/cbc-2.10.patch",
+      "sha256": "073ffb3d98861d783d01e5d0df3e34dd5f03efa34a48cf4b981a0600a2d32f9b",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/cbc-2.10.patch",
+      "sourceFileSha256": "073ffb3d98861d783d01e5d0df3e34dd5f03efa34a48cf4b981a0600a2d32f9b",
+      "sourcePath": "patches/cbc-2.10.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/cgl-0.60.patch",
+      "sha256": "099dddd4af34ab45ddbb9cc1fd9d82fc9c5caa57248216100147555f58e062c2",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/cgl-0.60.patch",
+      "sourceFileSha256": "099dddd4af34ab45ddbb9cc1fd9d82fc9c5caa57248216100147555f58e062c2",
+      "sourcePath": "patches/cgl-0.60.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/clp-1.17.patch",
+      "sha256": "4225be54555882aacf64971624713023bfd1e73f6bdc555ec79ee31fe02698fa",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/clp-1.17.patch",
+      "sourceFileSha256": "4225be54555882aacf64971624713023bfd1e73f6bdc555ec79ee31fe02698fa",
+      "sourcePath": "patches/clp-1.17.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/coinutils-2.11.patch",
+      "sha256": "c4429c266ffb52d6f4d2d544865bf0d25dd6278f30a9b2ed14bc521484c66e9a",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/coinutils-2.11.patch",
+      "sourceFileSha256": "c4429c266ffb52d6f4d2d544865bf0d25dd6278f30a9b2ed14bc521484c66e9a",
+      "sourcePath": "patches/coinutils-2.11.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/eigen3-3.4.0.patch",
+      "sha256": "610d1af79a499b6a74cdaa5ee8ca49f6c17ba5191ed7da1c28c9b5f27eb6637e",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/eigen3-3.4.0.patch",
+      "sourceFileSha256": "610d1af79a499b6a74cdaa5ee8ca49f6c17ba5191ed7da1c28c9b5f27eb6637e",
+      "sourcePath": "patches/eigen3-3.4.0.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/osi-0.108.patch",
+      "sha256": "d9483fc1e0c9930f90766452b8ece3875e478572fefc522986c39d60429bc7cf",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/osi-0.108.patch",
+      "sourceFileSha256": "d9483fc1e0c9930f90766452b8ece3875e478572fefc522986c39d60429bc7cf",
+      "sourcePath": "patches/osi-0.108.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/protobuf-v33.1.patch",
+      "sha256": "0983dd7e7696a15659233a6b08ada45ba3261893819b22403baee321bd1dd86f",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/protobuf-v33.1.patch",
+      "sourceFileSha256": "0983dd7e7696a15659233a6b08ada45ba3261893819b22403baee321bd1dd86f",
+      "sourcePath": "patches/protobuf-v33.1.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/re2-2025-08-12.patch",
+      "sha256": "8c88fc3d17bb14b4460be97eccb5354692391f99aa7a03d6e7bb121d30dd724c",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/re2-2025-08-12.patch",
+      "sourceFileSha256": "8c88fc3d17bb14b4460be97eccb5354692391f99aa7a03d6e7bb121d30dd724c",
+      "sourcePath": "patches/re2-2025-08-12.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/scip-v10.0.0.patch",
+      "sha256": "672e54df2ae71d009732b9d656f763a5919e67049e72d82dc6911fcffd2abe48",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/scip-v10.0.0.patch",
+      "sourceFileSha256": "672e54df2ae71d009732b9d656f763a5919e67049e72d82dc6911fcffd2abe48",
+      "sourcePath": "patches/scip-v10.0.0.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "ortools/patches/soplex-v8.0.0.patch",
+      "sha256": "8faab2cf9db790948031116c157574641e6e48846e161bcebebeeb54caa05843",
+      "sourceUrl": "https://raw.githubusercontent.com/google/or-tools/551ad10d94835c99e5e1e684500d3db398c0e345/patches/soplex-v8.0.0.patch",
+      "sourceFileSha256": "8faab2cf9db790948031116c157574641e6e48846e161bcebebeeb54caa05843",
+      "sourcePath": "patches/soplex-v8.0.0.patch",
+      "kind": "patch"
+    },
+    {
+      "path": "osi/LICENSE",
+      "sha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/Osi/ab3d7568384854c7c2bcd53f608c7b4b31a3f033/LICENSE",
+      "sourceFileSha256": "5af94e656b0a51f0694901e8ee715dfb738ab65b88e8e2b9c52fa80340fa1500",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "osi/Osi/LICENSE",
+      "sha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourceUrl": "https://raw.githubusercontent.com/Mizux/Osi/ab3d7568384854c7c2bcd53f608c7b4b31a3f033/Osi/LICENSE",
+      "sourceFileSha256": "0076749b626931ea5aaee25ddd5019fbfd96da78243cc0d5bd24fe246500981f",
+      "sourcePath": "Osi/LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "protobuf/LICENSE",
+      "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d",
+      "sourceUrl": "https://raw.githubusercontent.com/protocolbuffers/protobuf/a8d85ffbc7158660b4247f732371d1b07780510e/LICENSE",
+      "sourceFileSha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "protobuf/third_party/utf8_range/LICENSE",
+      "sha256": "02de69b64fc36d9e938f418e52723e42f0b2b226d58a9cb3c8dcbdf7059f5074",
+      "sourceUrl": "https://raw.githubusercontent.com/protocolbuffers/protobuf/a8d85ffbc7158660b4247f732371d1b07780510e/third_party/utf8_range/LICENSE",
+      "sourceFileSha256": "02de69b64fc36d9e938f418e52723e42f0b2b226d58a9cb3c8dcbdf7059f5074",
+      "sourcePath": "third_party/utf8_range/LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "re2/LICENSE",
+      "sha256": "6040cda75d90b1738292a631d89934c411ef7ffd543c4d6a1b7edfc8edf29449",
+      "sourceUrl": "https://raw.githubusercontent.com/google/re2/0f6c07eae69151e606acb3d9232750c3442dff23/LICENSE",
+      "sourceFileSha256": "6040cda75d90b1738292a631d89934c411ef7ffd543c4d6a1b7edfc8edf29449",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "scip/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sourceUrl": "https://raw.githubusercontent.com/scipopt/scip/0c80fdd8e91d7d9f23c0c7a55b68884209d5f27c/LICENSE",
+      "sourceFileSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "scip/src/tclique/LICENSE",
+      "sha256": "89711386097c3932ec83f37725ac57233adbcd48a7858e693d16ad5bb5dc2f70",
+      "sourceUrl": "https://raw.githubusercontent.com/scipopt/scip/0c80fdd8e91d7d9f23c0c7a55b68884209d5f27c/src/tclique/LICENSE",
+      "sourceFileSha256": "89711386097c3932ec83f37725ac57233adbcd48a7858e693d16ad5bb5dc2f70",
+      "sourcePath": "src/tclique/LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "scip/src/tinycthread/COPYRIGHT",
+      "sha256": "18b257c0654f631e27096dadc4284bb46483be324ebd09c98cf053352006d383",
+      "sourceUrl": "https://raw.githubusercontent.com/scipopt/scip/0c80fdd8e91d7d9f23c0c7a55b68884209d5f27c/src/tinycthread/COPYRIGHT",
+      "sourceFileSha256": "18b257c0654f631e27096dadc4284bb46483be324ebd09c98cf053352006d383",
+      "sourcePath": "src/tinycthread/COPYRIGHT",
+      "kind": "notice"
+    },
+    {
+      "path": "soplex/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sourceUrl": "https://raw.githubusercontent.com/scipopt/soplex/2207cfb274dbce5c2644911dd621438535733607/LICENSE",
+      "sourceFileSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "soplex/src/soplex/external/fmt/LICENSE.rst",
+      "sha256": "825c9324e70f8c839c8ba910543dd4a7daee243b86ef960594c11381a19980b8",
+      "sourceUrl": "https://raw.githubusercontent.com/scipopt/soplex/2207cfb274dbce5c2644911dd621438535733607/src/soplex/external/fmt/LICENSE.rst",
+      "sourceFileSha256": "825c9324e70f8c839c8ba910543dd4a7daee243b86ef960594c11381a19980b8",
+      "sourcePath": "src/soplex/external/fmt/LICENSE.rst",
+      "kind": "notice"
+    },
+    {
+      "path": "soplex/src/soplex/external/zstr/License.txt",
+      "sha256": "bd61d5fb15992f4c188a0f96dd836b20d449cd080b4e949ab89f9eda3f61c59a",
+      "sourceUrl": "https://raw.githubusercontent.com/scipopt/soplex/2207cfb274dbce5c2644911dd621438535733607/src/soplex/external/zstr/License.txt",
+      "sourceFileSha256": "bd61d5fb15992f4c188a0f96dd836b20d449cd080b4e949ab89f9eda3f61c59a",
+      "sourcePath": "src/soplex/external/zstr/License.txt",
+      "kind": "notice"
+    },
+    {
+      "path": "unicode-15.1.0/LICENSE.txt",
+      "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+      "sourceUrl": "https://www.unicode.org/license.txt",
+      "sourceFileSha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+      "kind": "notice"
+    },
+    {
+      "path": "unicode-15.1.0/ReadMe.txt",
+      "sha256": "0d2da782ead4e85630d510f50808355e8c3355e670841d257dd1e6fbd40db9fa",
+      "sourceUrl": "https://www.unicode.org/Public/15.1.0/ucd/ReadMe.txt",
+      "sourceFileSha256": "0d2da782ead4e85630d510f50808355e8c3355e670841d257dd1e6fbd40db9fa",
+      "kind": "notice"
+    },
+    {
+      "path": "zlib/LICENSE",
+      "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243",
+      "sourceUrl": "https://raw.githubusercontent.com/madler/zlib/51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf/LICENSE",
+      "sourceFileSha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243",
+      "sourcePath": "LICENSE",
+      "kind": "notice"
+    },
+    {
+      "path": "zstr/LICENSE",
+      "sha256": "f2b4ae40b0311262960b46f697497994fe35706110ac04f04b3768d9ea7df460",
+      "sourceUrl": "https://raw.githubusercontent.com/mateidavid/zstr/93cfe0a8cead9cdebe06ecff602baca5bd043abe/LICENSE",
+      "sourceFileSha256": "f2b4ae40b0311262960b46f697497994fe35706110ac04f04b3768d9ea7df460",
+      "kind": "notice"
+    }
+  ]
+}

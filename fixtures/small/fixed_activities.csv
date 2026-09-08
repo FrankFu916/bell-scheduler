@@ -1,0 +1,4 @@
+course_plan_code,audience_kind,audience_code,meeting_ordinal,day,period,duration,room_code,teacher_code
+CP-CHINESE,administrative_class,AC01,1,周一,1,1,R-A1,T-CHN-1
+CP-MATH,administrative_class,AC02,1,周一,1,1,R-A2,T-MATH-2
+CP-PHYSICS,teaching_section,SEC-PHY-1,1,周二,3,2,R-PHY-1,T-PHY-1

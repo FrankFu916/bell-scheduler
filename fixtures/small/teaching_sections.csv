@@ -1,0 +1,7 @@
+section_code,name,grade_code,subject_code,min_size,target_size,max_size,room_policy,room_candidates,preferred_rooms,fallback_rooms,teacher_assignment,teacher_codes
+SEC-PHY-1,物理1班,G12,physics,10,12,16,section_fixed,R-PHY-1;R-PHY-2,,,fixed,T-PHY-1
+SEC-CHEM-1,化学1班,G12,chemistry,10,12,16,section_fixed,R-CHEM-1;R-CHEM-2,,,candidates,T-CHEM-1;T-CHEM-2
+SEC-BIO-1,生物1班,G12,biology,10,12,16,section_fixed,R-BIO-1;R-BIO-2,,,fixed,T-BIO-1
+SEC-HIS-1,历史1班,G12,history,10,12,16,section_fixed,R-HUM-1;R-HUM-2,,,fixed,T-HIS-1
+SEC-POL-1,思想政治1班,G12,politics,10,12,16,section_fixed,R-HUM-1;R-HUM-2,,,candidates,T-POL-1;T-POL-2
+SEC-GEO-1,地理1班,G12,geography,10,12,16,section_fixed,R-HUM-1;R-HUM-2,,,fixed,T-GEO-1

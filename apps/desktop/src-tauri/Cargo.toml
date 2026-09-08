@@ -1,0 +1,45 @@
+[package]
+name = "class-schedule-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[features]
+managed-worker = []
+
+[lib]
+name = "class_schedule_desktop"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "class-schedule-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+class-schedule-application = { path = "../../../crates/application" }
+class-schedule-domain = { path = "../../../crates/domain" }
+class-schedule-import = { path = "../../../crates/import" }
+class-schedule-persistence = { path = "../../../crates/persistence" }
+class-schedule-validation = { path = "../../../crates/validation" }
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "=0.10.9"
+solver-client = { path = "../../../crates/solver-client" }
+solver-contract = { path = "../../../crates/solver-contract" }
+tauri.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+csv.workspace = true
+rusqlite.workspace = true
+tempfile.workspace = true
+zip.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "排课助手 · Bell",
+  "version": "0.1.0",
+  "identifier": "cn.classschedule.planner",
+  "build": {
+    "beforeDevCommand": "npm --prefix ../../frontend run dev",
+    "beforeBuildCommand": "npm --prefix ../../frontend run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../../../frontend/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "排课助手 · Bell",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1080,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": false,
+    "category": "Education",
+    "copyright": "Copyright 2026 Bell contributors",
+    "license": "Apache-2.0",
+    "licenseFile": "../../../LICENSE",
+    "shortDescription": "排课助手 · Bell — 高中 3+3 选科走班排课工具",
+    "icon": []
+  }
+}

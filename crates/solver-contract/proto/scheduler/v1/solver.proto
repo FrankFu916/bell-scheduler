@@ -1,0 +1,350 @@
+syntax = "proto3";
+
+package scheduler.v1;
+
+// Every stdin/stdout message is wrapped so version and correlation data can be
+// checked before interpreting the solve payload.
+message SolverEnvelope {
+  uint32 protocol_version = 1;
+  string request_id = 2;
+  oneof payload {
+    SolveRequest solve_request = 10;
+    SolveResponse solve_response = 11;
+  }
+}
+
+message SolveRequest {
+  EngineVersion required_engine_version = 1;
+  SolverParameters parameters = 2;
+  SchedulingProblemSnapshot problem = 3;
+}
+
+message SolveResponse {
+  EngineVersion engine_version = 1;
+  SolverStatus status = 2;
+  // Stable machine-readable detail code; localized text belongs outside the worker.
+  string status_detail_code = 3;
+  ObjectiveBreakdown objective = 4;
+  SolverStatistics statistics = 5;
+  repeated MeetingAssignment assignments = 6;
+  repeated SectionRoomAssignment section_room_assignments = 7;
+  repeated DiagnosticGroup diagnostic_groups = 8;
+  bytes output_hash = 9;
+  SolverParameters effective_parameters = 10;
+  bytes input_snapshot_hash = 11;
+}
+
+message EngineVersion {
+  string engine_name = 1;
+  string engine_version = 2;
+  string adapter_version = 3;
+  string build_revision = 4;
+}
+
+message SolverParameters {
+  uint64 seed = 1;
+  SolveMode mode = 2;
+  SolverProfile profile = 3;
+  bool reproducible = 4;
+  uint64 time_limit_millis = 5;
+  uint32 worker_count = 6;
+  bool collect_diagnostics = 7;
+  uint64 memory_limit_bytes = 8;
+  uint32 relative_gap_limit_ppm = 9;
+}
+
+enum SolveMode {
+  SOLVE_MODE_UNSPECIFIED = 0;
+  SOLVE_MODE_GENERATE = 1;
+  SOLVE_MODE_IMPROVE = 2;
+  SOLVE_MODE_REPAIR = 3;
+  SOLVE_MODE_DIAGNOSE = 4;
+}
+
+enum SolverProfile {
+  SOLVER_PROFILE_UNSPECIFIED = 0;
+  SOLVER_PROFILE_FAST = 1;
+  SOLVER_PROFILE_BALANCED = 2;
+  SOLVER_PROFILE_BEST_QUALITY = 3;
+}
+
+enum SolverStatus {
+  SOLVER_STATUS_UNSPECIFIED = 0;
+  SOLVER_STATUS_OPTIMAL = 1;
+  SOLVER_STATUS_FEASIBLE = 2;
+  SOLVER_STATUS_PROVEN_INFEASIBLE = 3;
+  SOLVER_STATUS_TIMEOUT = 4;
+  SOLVER_STATUS_UNKNOWN = 5;
+  SOLVER_STATUS_CANCELLED = 6;
+  SOLVER_STATUS_INVALID_INPUT = 7;
+  SOLVER_STATUS_INVALID_MODEL = 8;
+  SOLVER_STATUS_INTERNAL_ERROR = 9;
+}
+
+// This is a scheduling-domain snapshot, not a solver-variable IR.
+message SchedulingProblemSnapshot {
+  uint32 schema_version = 1;
+  bytes snapshot_hash = 2;
+  string project_id = 3;
+  uint64 project_revision = 4;
+  string scenario_id = 5;
+  uint64 scenario_revision = 6;
+  repeated WeekPattern week_patterns = 10;
+  repeated CalendarTimeslot timeslots = 11;
+  repeated Room rooms = 12;
+  repeated Activity activities = 13;
+  StudentConflictGraph student_conflicts = 14;
+  repeated ResourceConflictGroup resource_conflicts = 15;
+  repeated SectionRoomBinding section_room_bindings = 16;
+  repeated MeetingPattern meeting_patterns = 17;
+  repeated LockedAssignment locks = 18;
+  repeated MeetingAssignment incumbent_assignments = 19;
+  repeated ConstraintGroup constraint_groups = 20;
+  repeated ObjectiveTierDefinition objective_tiers = 21;
+  repeated Teacher teachers = 22;
+}
+
+message WeekPattern {
+  uint32 week_pattern_id = 1;
+  string stable_key = 2;
+  repeated uint32 teaching_week_numbers = 3;
+}
+
+message CalendarTimeslot {
+  uint32 timeslot_id = 1;
+  uint32 week_pattern_id = 2;
+  uint32 day_index = 3;
+  uint32 period_index = 4;
+  optional uint32 next_consecutive_timeslot_id = 5;
+}
+
+message Room {
+  uint32 room_id = 1;
+  uint32 capacity = 2;
+  repeated uint32 feature_ids = 3;
+  uint32 building_id = 4;
+  repeated uint32 available_timeslot_ids = 5;
+}
+
+message Teacher {
+  uint32 teacher_id = 1;
+  repeated uint32 available_timeslot_ids = 2;
+}
+
+message Activity {
+  uint32 activity_id = 1;
+  uint32 meeting_demand_id = 2;
+  uint32 subject_id = 3;
+  optional uint32 section_id = 4;
+  optional uint32 administrative_class_id = 5;
+  uint32 duration_periods = 6;
+  repeated uint32 allowed_start_timeslot_ids = 7;
+  TeacherAssignmentPolicy teacher_policy = 8;
+  uint32 section_room_binding_id = 9;
+  uint32 meeting_pattern_id = 10;
+  repeated string constraint_group_ids = 11;
+  // All meetings of one offering share this binding. Candidate-teacher choice is
+  // therefore offering-fixed rather than independently chosen per activity.
+  uint32 teacher_binding_id = 12;
+}
+
+message TeacherAssignmentPolicy {
+  oneof policy {
+    FixedTeacher fixed_teacher = 1;
+    CandidateTeachers candidate_teachers = 2;
+  }
+}
+
+message FixedTeacher {
+  uint32 teacher_id = 1;
+}
+
+message CandidateTeachers {
+  repeated uint32 teacher_ids = 1;
+}
+
+message StudentConflictGraph {
+  repeated ActivityConflictEdge edges = 1;
+  repeated ActivityConflictClique cliques = 2;
+}
+
+message ActivityConflictEdge {
+  uint32 left_activity_id = 1;
+  uint32 right_activity_id = 2;
+}
+
+message ActivityConflictClique {
+  repeated uint32 activity_ids = 1;
+}
+
+enum ResourceKind {
+  RESOURCE_KIND_UNSPECIFIED = 0;
+  RESOURCE_KIND_TEACHER = 1;
+  RESOURCE_KIND_ROOM = 2;
+}
+
+message ResourceConflictGroup {
+  ResourceKind resource_kind = 1;
+  uint32 resource_id = 2;
+  repeated uint32 activity_ids = 3;
+}
+
+message SectionRoomBinding {
+  uint32 binding_id = 1;
+  optional uint32 section_id = 2;
+  RoomPolicy policy = 3;
+  uint32 required_capacity = 4;
+  repeated uint32 required_feature_ids = 5;
+}
+
+message RoomPolicy {
+  oneof policy {
+    AdminHomeRoom admin_home_room = 1;
+    FixedRoom fixed = 2;
+    SectionFixedRooms section_fixed = 3;
+    PreferredFixedRooms preferred_fixed = 4;
+    FlexibleRooms flexible = 5;
+  }
+}
+
+message AdminHomeRoom { uint32 room_id = 1; }
+message FixedRoom { uint32 room_id = 1; }
+message SectionFixedRooms { repeated uint32 candidate_room_ids = 1; }
+message PreferredFixedRooms {
+  repeated uint32 preferred_room_ids = 1;
+  repeated uint32 fallback_room_ids = 2;
+}
+message FlexibleRooms { repeated uint32 candidate_room_ids = 1; }
+
+message MeetingPattern {
+  uint32 meeting_pattern_id = 1;
+  repeated uint32 activity_ids = 2;
+  // For example [2, 1, 1, 1], in a stable demand order.
+  repeated uint32 duration_periods = 3;
+  uint32 minimum_gap_days = 4;
+  uint32 maximum_periods_per_day = 5;
+  bool forbid_cross_break = 6;
+}
+
+message MeetingAssignment {
+  uint32 activity_id = 1;
+  uint32 start_timeslot_id = 2;
+  uint32 room_id = 3;
+  uint32 teacher_id = 4;
+  uint32 duration_periods = 5;
+}
+
+message SectionRoomAssignment {
+  uint32 section_room_binding_id = 1;
+  uint32 room_id = 2;
+}
+
+message LockedAssignment {
+  string lock_id = 1;
+  MeetingAssignment assignment = 2;
+  string constraint_group_id = 3;
+}
+
+enum ConstraintSeverity {
+  CONSTRAINT_SEVERITY_UNSPECIFIED = 0;
+  CONSTRAINT_SEVERITY_HARD = 1;
+  CONSTRAINT_SEVERITY_QUALITY = 2;
+  CONSTRAINT_SEVERITY_PREFERENCE = 3;
+}
+
+message ConstraintGroup {
+  string group_id = 1;
+  string problem_code = 2;
+  ConstraintSeverity severity = 3;
+  bool assumption_enabled = 4;
+  repeated EntityReference related_entities = 5;
+  map<string, string> parameters = 6;
+}
+
+enum EntityKind {
+  ENTITY_KIND_UNSPECIFIED = 0;
+  ENTITY_KIND_ACTIVITY = 1;
+  ENTITY_KIND_STUDENT = 2;
+  ENTITY_KIND_TEACHER = 3;
+  ENTITY_KIND_ROOM = 4;
+  ENTITY_KIND_SECTION = 5;
+  ENTITY_KIND_ADMINISTRATIVE_CLASS = 6;
+  ENTITY_KIND_SUBJECT = 7;
+  ENTITY_KIND_TIMESLOT = 8;
+}
+
+message EntityReference {
+  EntityKind entity_kind = 1;
+  uint32 compact_id = 2;
+}
+
+enum DiagnosticSignal {
+  DIAGNOSTIC_SIGNAL_UNSPECIFIED = 0;
+  DIAGNOSTIC_SIGNAL_STATIC_PRECHECK = 1;
+  // A sufficient assumptions set is explicitly not promised to be minimal.
+  DIAGNOSTIC_SIGNAL_SUFFICIENT_ASSUMPTIONS = 2;
+  DIAGNOSTIC_SIGNAL_MODEL_BUILD = 3;
+  DIAGNOSTIC_SIGNAL_OUTPUT_VALIDATION = 4;
+}
+
+message DiagnosticGroup {
+  string group_id = 1;
+  string problem_code = 2;
+  DiagnosticSignal signal = 3;
+  repeated EntityReference related_entities = 4;
+  map<string, string> parameters = 5;
+}
+
+enum ObjectiveMetricKind {
+  OBJECTIVE_METRIC_KIND_UNSPECIFIED = 0;
+  OBJECTIVE_METRIC_KIND_REPAIR_CHANGES = 1;
+  OBJECTIVE_METRIC_KIND_COURSE_DISTRIBUTION = 2;
+  OBJECTIVE_METRIC_KIND_DAILY_SUBJECT_CONCENTRATION = 3;
+  OBJECTIVE_METRIC_KIND_TEACHER_GAPS = 4;
+  OBJECTIVE_METRIC_KIND_TEACHER_CONSECUTIVE_LOAD = 5;
+  OBJECTIVE_METRIC_KIND_UNDESIRABLE_TIME_FAIRNESS = 6;
+  OBJECTIVE_METRIC_KIND_STUDENT_MOVEMENT = 7;
+  OBJECTIVE_METRIC_KIND_TEACHER_MOVEMENT = 8;
+  OBJECTIVE_METRIC_KIND_LAYOUT_STABILITY = 9;
+}
+
+message ObjectiveTierDefinition {
+  string tier_id = 1;
+  uint32 priority = 2;
+  repeated ObjectiveMetricDefinition metrics = 3;
+}
+
+message ObjectiveMetricDefinition {
+  ObjectiveMetricKind metric_kind = 1;
+  uint32 weight_within_tier = 2;
+  repeated EntityReference scope = 3;
+  map<string, sint64> parameters = 4;
+}
+
+message ObjectiveBreakdown {
+  repeated ObjectiveTierResult tiers = 1;
+}
+
+message ObjectiveTierResult {
+  string tier_id = 1;
+  uint32 priority = 2;
+  sint64 value = 3;
+  sint64 best_bound = 4;
+  repeated ObjectiveMetricResult metrics = 5;
+}
+
+message ObjectiveMetricResult {
+  ObjectiveMetricKind metric_kind = 1;
+  sint64 value = 2;
+}
+
+message SolverStatistics {
+  uint64 wall_time_millis = 1;
+  double deterministic_time = 2;
+  uint64 conflicts = 3;
+  uint64 branches = 4;
+  uint64 propagations = 5;
+  uint64 peak_memory_bytes = 6;
+  uint32 worker_count = 7;
+  uint64 seed = 8;
+}

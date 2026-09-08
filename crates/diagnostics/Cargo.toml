@@ -1,0 +1,19 @@
+[package]
+name = "class-schedule-diagnostics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+class-schedule-validation = { path = "../validation" }
+serde.workspace = true
+solver-contract = { path = "../solver-contract" }
+
+[dev-dependencies]
+class-schedule-scheduling = { path = "../scheduling" }
+
+[lints]
+workspace = true

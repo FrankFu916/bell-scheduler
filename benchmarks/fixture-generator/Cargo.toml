@@ -1,0 +1,19 @@
+[package]
+name = "class-schedule-fixture-generator"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+class-schedule-import = { path = "../../crates/import" }
+
+[dev-dependencies]
+class-schedule-application = { path = "../../crates/application" }
+class-schedule-validation = { path = "../../crates/validation" }
+tempfile.workspace = true
+
+[lints]
+workspace = true

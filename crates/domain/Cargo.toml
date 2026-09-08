@@ -1,0 +1,15 @@
+[package]
+name = "class-schedule-domain"
+version = "0.1.0"
+edition = "2024"
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

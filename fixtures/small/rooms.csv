@@ -1,0 +1,11 @@
+room_code,name,building_code,capacity,features
+R-A1,高三1班教室,B-TEACH,36,multimedia
+R-A2,高三2班教室,B-TEACH,36,multimedia
+R-PHY-1,物理实验室一,B-SCI,18,physics_lab;multimedia
+R-PHY-2,物理实验室二,B-SCI,18,physics_lab;multimedia
+R-CHEM-1,化学实验室一,B-SCI,18,chemistry_lab;multimedia
+R-CHEM-2,化学实验室二,B-SCI,18,chemistry_lab;multimedia
+R-BIO-1,生物实验室一,B-SCI,18,biology_lab;multimedia
+R-BIO-2,生物实验室二,B-SCI,18,biology_lab;multimedia
+R-HUM-1,走班教室一,B-TEACH,30,multimedia
+R-HUM-2,走班教室二,B-TEACH,30,multimedia
