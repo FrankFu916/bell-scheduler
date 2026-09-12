@@ -38,7 +38,7 @@ pub(super) struct ScenarioTimetableArgs {
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
-enum View {
+pub(super) enum View {
     AdministrativeClass,
     TeachingSection,
     Teacher,
@@ -61,7 +61,7 @@ impl View {
         }
     }
 
-    fn filter(self, id: &str) -> Result<TimetableFilter, CliFailure> {
+    pub(super) fn filter(self, id: &str) -> Result<TimetableFilter, CliFailure> {
         let filter = match self {
             Self::AdministrativeClass => id.parse().map(TimetableFilter::AdministrativeClass),
             Self::TeachingSection => id.parse().map(TimetableFilter::TeachingSection),

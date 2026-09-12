@@ -25,6 +25,7 @@ pub mod managed_worker;
 mod problem_messages;
 mod project_queries;
 mod scenario_commands;
+mod scenario_export;
 mod scenario_timetable_queries;
 mod solve_commands;
 mod timetable_queries;
@@ -700,6 +701,8 @@ fn import_problem_message(code: class_schedule_import::ImportProblemCode) -> &'s
 /// boundary there is no caller that can recover; command-level failures remain structured values.
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .manage(scenario_export::ScenarioExportJobs::default())
         .manage(solve_commands::SolveJobs::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -724,6 +727,7 @@ pub fn run() {
             scenario_commands::copy_saved_scenario,
             scenario_commands::load_saved_scenario,
             scenario_commands::list_saved_scenarios,
+            scenario_export::export_scenario_timetable,
             scenario_timetable_queries::query_scenario_timetable,
             scenario_timetable_queries::query_scenario_timetable_entities,
             timetable_queries::query_saved_timetable,

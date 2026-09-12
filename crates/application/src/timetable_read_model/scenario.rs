@@ -160,7 +160,7 @@ pub fn query_scenario_timetable_entities(
     })
 }
 
-fn load_expected_scenario(
+pub(super) fn load_expected_scenario(
     store: &SqliteStore,
     scenario_id: ScenarioId,
     expected_scenario_revision: Revision,
@@ -186,7 +186,7 @@ fn load_expected_scenario(
     Ok(loaded)
 }
 
-fn projection_input(loaded: &LoadedScenario) -> TimetableProjectionInput<'_> {
+pub(super) fn projection_input(loaded: &LoadedScenario) -> TimetableProjectionInput<'_> {
     TimetableProjectionInput {
         source: loaded.source_document(),
         compiled: loaded.compiled(),

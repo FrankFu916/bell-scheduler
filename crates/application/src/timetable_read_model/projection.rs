@@ -215,6 +215,28 @@ pub(super) fn project(
     input: &TimetableProjectionInput<'_>,
     query: &TimetableQuery,
 ) -> Result<(Vec<TimetableRow>, Vec<TimetableGridCell>, u32), TimetableQueryError> {
+    project_bounded(input, query, None)
+}
+
+pub(super) fn project_complete(
+    input: &TimetableProjectionInput<'_>,
+    filter: TimetableFilter,
+    maximum_meetings: usize,
+    maximum_text_bytes: usize,
+) -> Result<(Vec<TimetableRow>, Vec<TimetableGridCell>, u32), TimetableQueryError> {
+    let query = TimetableQuery {
+        filter,
+        offset: 0,
+        limit: count(input.assignments.len())?.max(1),
+    };
+    project_bounded(input, &query, Some((maximum_text_bytes, maximum_meetings)))
+}
+
+fn project_bounded(
+    input: &TimetableProjectionInput<'_>,
+    query: &TimetableQuery,
+    export_limits: Option<(usize, usize)>,
+) -> Result<(Vec<TimetableRow>, Vec<TimetableGridCell>, u32), TimetableQueryError> {
     let problem = &input.compiled.problem;
     let students = student_mask(input, query.filter)?;
     let mut matching = Vec::new();
@@ -228,9 +250,13 @@ pub(super) fn project(
         }
     }
     matching.sort_by_key(|(assignment, activity)| (assignment.start.0, activity.stable_id));
+    if export_limits.is_some_and(|(_, meetings)| matching.len() > meetings) {
+        return Err(TimetableQueryError::ResourceLimit);
+    }
     let total_rows = count(matching.len())?;
     let mut calendar = calendar(input)?;
     let mut rows = Vec::new();
+    let mut text_bytes = 0_usize;
     for (position, (assignment, activity)) in matching.into_iter().enumerate() {
         let occupied = problem
             .occupied_slots(assignment.activity, assignment.start)
@@ -248,15 +274,51 @@ pub(super) fn project(
             }
         }
         if visible {
-            rows.push(row(
+            let row = row(
                 input,
                 assignment,
                 activity,
                 occupied.into_iter().map(|slot| slot.0).collect(),
-            )?);
+            )?;
+            if let Some((budget, _)) = export_limits {
+                text_bytes = text_bytes
+                    .checked_add(row_text_bytes(&row))
+                    .ok_or(TimetableQueryError::ResourceLimit)?;
+                if text_bytes > budget {
+                    return Err(TimetableQueryError::ResourceLimit);
+                }
+            }
+            rows.push(row);
         }
     }
     Ok((rows, calendar, total_rows))
+}
+
+fn row_text_bytes(row: &TimetableRow) -> usize {
+    let audience = match &row.audience {
+        TimetableAudience::AdministrativeClass(label) => (&label.code, &label.label),
+        TimetableAudience::TeachingSection(label) => (&label.code, &label.label),
+    };
+    [
+        &row.day_label,
+        &row.period_label,
+        &row.grade.code,
+        &row.grade.label,
+        &row.subject.code,
+        &row.subject.label,
+        &row.course_plan.code,
+        &row.course_plan.label,
+        audience.0,
+        audience.1,
+        &row.teacher.code,
+        &row.teacher.label,
+        &row.room.code,
+        &row.room.label,
+    ]
+    .into_iter()
+    .map(String::len)
+    .sum::<usize>()
+    .saturating_add(512)
 }
 
 fn calendar(

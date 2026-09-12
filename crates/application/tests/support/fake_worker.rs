@@ -43,6 +43,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         // Deliver cancellation through the real framed protocol after the first candidate's
         // validated feasible result, without a timer racing process startup in the test.
         (SolverStatus::Cancelled, "SOLVER_CANCELLED", Vec::new())
+    } else if mode == "parallel-export" {
+        (
+            SolverStatus::Feasible,
+            "SOLVER_FEASIBLE",
+            parallel_export_assignments(problem)?,
+        )
     } else if mode == "cancel-after-feasible" || mode == "feasible-then-crash" {
         // This fixture has only single-period sections, one teacher, and one room.
         // Sequential starts provide a valid first candidate before cancellation of the next.
@@ -121,6 +127,60 @@ fn sequential_assignments(
                     .ok_or("fixture has insufficient starts")?,
                 room_id: 1,
                 teacher_id: 1,
+                duration_periods: activity.duration_periods,
+            })
+        })
+        .collect()
+}
+
+/// An explicit response fixture: 26 independent homerooms each meet four times on Monday,
+/// followed by three whole-grade sections on Tuesday. It does not search for a timetable.
+fn parallel_export_assignments(
+    problem: &solver_contract::SchedulingProblemSnapshot,
+) -> Result<Vec<MeetingAssignment>, Box<dyn Error>> {
+    use solver_contract::room_policy::Policy;
+    if problem.activities.len() != 107 || problem.rooms.len() != 26 || problem.teachers.len() != 26
+    {
+        return Err("parallel export fixture shape changed".into());
+    }
+    let mut class_ordinals = std::collections::BTreeMap::<u32, u32>::new();
+    let mut section_start = 5;
+    problem
+        .activities
+        .iter()
+        .map(|activity| {
+            let (start, room) = if let Some(class) = activity.administrative_class_id {
+                let ordinal = class_ordinals.entry(class).or_default();
+                *ordinal += 1;
+                if *ordinal > 4 {
+                    return Err("parallel fixture has too many class meetings".into());
+                }
+                let binding = problem
+                    .section_room_bindings
+                    .iter()
+                    .find(|binding| binding.binding_id == activity.section_room_binding_id)
+                    .ok_or("fixture room binding missing")?;
+                let Some(Policy::AdminHomeRoom(room)) = binding
+                    .policy
+                    .as_ref()
+                    .and_then(|policy| policy.policy.as_ref())
+                else {
+                    return Err("fixture class has no homeroom".into());
+                };
+                (*ordinal, room.room_id)
+            } else {
+                let start = section_start;
+                section_start += activity.duration_periods;
+                (start, 1)
+            };
+            if !activity.allowed_start_timeslot_ids.contains(&start) {
+                return Err("fixture start is not allowed".into());
+            }
+            Ok(MeetingAssignment {
+                activity_id: activity.activity_id,
+                start_timeslot_id: start,
+                room_id: room,
+                teacher_id: room,
                 duration_periods: activity.duration_periods,
             })
         })

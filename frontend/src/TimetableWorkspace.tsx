@@ -7,6 +7,8 @@ import {
 import { loadScenarioTimetable, loadScenarioTimetableEntities, scenarioTimetableKey,
   type ScenarioTimetableEntityPage, type ScenarioTimetablePage } from "./scenarioTimetableApi";
 import type { ScenarioReceipt } from "./scenarioApi";
+import { ScenarioTimetableExport } from "./ScenarioTimetableExport";
+import { scenarioExportContextKey } from "./scenarioTimetableExportApi";
 import "./TimetableWorkspace.css";
 
 const ENTITY_PAGE_SIZE = 20;
@@ -52,6 +54,7 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
   const [page, setPage] = useState<{ readonly view: TimetableView; readonly data: PageResult } | null>(null);
   const [loadingEntities, setLoadingEntities] = useState(false);
   const [loadingRows, setLoadingRows] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [failure, setFailure] = useState<ReturnType<typeof commandError> | null>(null);
   const [inspectedId, setInspectedId] = useState<string | null>(null);
   const inspectedHeading = useRef<HTMLHeadingElement>(null);
@@ -103,6 +106,9 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
   const cells = new Map(calendar.map((cell) => [`${cell.day}:${cell.periodIndex}`, cell]));
   const inspected = inspectedId ? rowsById.get(inspectedId) : undefined;
   const viewLabel = TIMETABLE_VIEWS.find((item) => item.value === view)?.label ?? "课表";
+  const exportContext = currentPage && "receipt" in currentPage ? {
+    receipt: currentPage.receipt, view, selection: currentPage.selection, totalRows: currentPage.totalRows,
+  } : null;
 
   function inspect(row: TimetableRow, trigger: HTMLButtonElement) {
     inspectedTrigger.current = trigger;
@@ -126,7 +132,7 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
     {historicalSource && <p className="timetable-history-warning" role="status">源项目已有更新。这里显示此方案保存的历史数据和课表，不会自动重排或改写方案。</p>}
     <div className="timetable-controls">
       <label htmlFor={`${labelId}-view`}>查看方式
-        <select id={`${labelId}-view`} value={view} onChange={(event) => {
+        <select id={`${labelId}-view`} value={view} disabled={exporting} onChange={(event) => {
           const selected = TIMETABLE_VIEWS.find((item) => item.value === event.target.value);
           if (selected) { setView(selected.value); setEntityOffset(0); setEntityId(""); setRowOffset(0); }
         }}>
@@ -134,16 +140,16 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
         </select>
       </label>
       <label htmlFor={`${labelId}-entity`}>选择{viewLabel}
-        <select id={`${labelId}-entity`} disabled={loadingEntities || !currentEntities?.entities.length} value={entityId}
+        <select id={`${labelId}-entity`} disabled={exporting || loadingEntities || !currentEntities?.entities.length} value={entityId}
           onChange={(event) => { setEntityId(event.target.value); setRowOffset(0); }}>
           <option value="">请选择{viewLabel}</option>
           {currentEntities?.entities.map((entity) => <option key={entity.id} value={entity.id}>{entity.label} · {entity.code}</option>)}
         </select>
       </label>
       <div className="timetable-pagination" aria-label={`${viewLabel}对象分页`}>
-        <button type="button" disabled={loadingEntities || entityOffset === 0} onClick={() => setEntityOffset(Math.max(0, entityOffset - ENTITY_PAGE_SIZE))}>上一页对象</button>
+        <button type="button" disabled={exporting || loadingEntities || entityOffset === 0} onClick={() => setEntityOffset(Math.max(0, entityOffset - ENTITY_PAGE_SIZE))}>上一页对象</button>
         <span>{currentEntities ? `${currentEntities.totalEntities} 个对象` : "读取对象…"}</span>
-        <button type="button" disabled={loadingEntities || !currentEntities?.hasMore} onClick={() => {
+        <button type="button" disabled={exporting || loadingEntities || !currentEntities?.hasMore} onClick={() => {
           if (currentEntities?.nextOffset !== null && currentEntities?.nextOffset !== undefined) setEntityOffset(currentEntities.nextOffset);
         }}>下一页对象</button>
       </div>
@@ -157,6 +163,8 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
     {currentPage && <>
       <div className="timetable-result-meta"><strong>{currentPage.selection.label}</strong><span>来源版本 {"receipt" in currentPage ? currentPage.receipt.sourceProjectRevision : currentPage.projectRevision}</span>
         <span>独立校验通过</span>{"selectedAttemptIndex" in currentPage && currentPage.selectedAttemptIndex !== null && <span>本次成班候选 {currentPage.selectedAttemptIndex + 1}</span>}</div>
+      {exportContext !== null && <ScenarioTimetableExport key={scenarioExportContextKey(exportContext)}
+        context={exportContext} onBusyChange={setExporting} />}
       <div className="timetable-grid-scroll" tabIndex={0} role="region" aria-label={`${currentPage.selection.label}周课表，可横向滚动`}>
         <table className="timetable-grid">
           <caption>{"receipt" in currentPage ? `${currentPage.scenarioDisplayName} · ` : ""}{currentPage.selection.label} · 周课表</caption>
@@ -184,9 +192,9 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
       </div>
       <p className="timetable-grid-note">周格保留全部课节。年级等综合视图可能有并行课次；“其他页”表示课次尚未加载到当前页。</p>
       <div className="timetable-pagination timetable-row-pagination" aria-label="课次分页">
-        <button type="button" disabled={loadingRows || rowOffset === 0} onClick={() => setRowOffset(Math.max(0, rowOffset - ROW_PAGE_SIZE))}>上一页课次</button>
+        <button type="button" disabled={exporting || loadingRows || rowOffset === 0} onClick={() => setRowOffset(Math.max(0, rowOffset - ROW_PAGE_SIZE))}>上一页课次</button>
         <span>{currentPage.totalRows === 0 ? "没有匹配课次" : `${rowOffset + 1}–${rowOffset + currentPage.rows.length} / ${currentPage.totalRows} 课次`}</span>
-        <button type="button" disabled={loadingRows || !currentPage.hasMore} onClick={() => { if (currentPage.nextOffset !== null) setRowOffset(currentPage.nextOffset); }}>下一页课次</button>
+        <button type="button" disabled={exporting || loadingRows || !currentPage.hasMore} onClick={() => { if (currentPage.nextOffset !== null) setRowOffset(currentPage.nextOffset); }}>下一页课次</button>
       </div>
       <div className="timetable-details-layout">
         <div className="timetable-list-scroll" tabIndex={0} role="region" aria-label="当前页课次列表">

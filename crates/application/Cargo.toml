@@ -17,17 +17,19 @@ class-schedule-scheduling = { path = "../scheduling" }
 class-schedule-sectioning = { path = "../sectioning" }
 class-schedule-scoring = { path = "../scoring" }
 class-schedule-validation = { path = "../validation" }
+csv.workspace = true
 prost.workspace = true
+rust_xlsxwriter.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 solver-client = { path = "../solver-client" }
 solver-contract = { path = "../solver-contract" }
 thiserror.workspace = true
+tempfile.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
-csv.workspace = true
-tempfile.workspace = true
+calamine.workspace = true
 rusqlite.workspace = true
 zip.workspace = true
 

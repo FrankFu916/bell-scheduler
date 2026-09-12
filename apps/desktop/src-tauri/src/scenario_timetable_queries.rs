@@ -134,13 +134,13 @@ impl From<ScenarioTimetablePage> for ScenarioTimetableResponse {
 }
 
 #[derive(Debug)]
-struct ScenarioQueryIdentity {
-    scenario_id: ScenarioId,
-    scenario_revision: Revision,
-    timetable_revision: Revision,
+pub(super) struct ScenarioQueryIdentity {
+    pub(super) scenario_id: ScenarioId,
+    pub(super) scenario_revision: Revision,
+    pub(super) timetable_revision: Revision,
 }
 
-fn decode_identity(
+pub(super) fn decode_identity(
     schema: u32,
     scenario_id: &str,
     scenario_revision: &str,
@@ -223,7 +223,7 @@ fn query_timetable_inner(
     .map_err(|error| query_error(&error))
 }
 
-fn open_query_store(database: &Path) -> Result<SqliteStore, CommandError> {
+pub(super) fn open_query_store(database: &Path) -> Result<SqliteStore, CommandError> {
     let metadata = std::fs::symlink_metadata(database).map_err(|error| {
         if error.kind() == std::io::ErrorKind::NotFound {
             CommandError::new(

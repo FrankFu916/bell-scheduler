@@ -18,8 +18,11 @@ use crate::{
     load_solve_artifact,
 };
 
+mod export;
 mod projection;
 mod scenario;
+
+pub use export::*;
 
 pub use scenario::{
     SCENARIO_TIMETABLE_READ_MODEL_SCHEMA_VERSION, ScenarioTimetableEntityPage,

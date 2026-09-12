@@ -10,7 +10,10 @@ use class_schedule_application::{
 use class_schedule_domain::{ScenarioId, SchoolProjectId, SolverRunId};
 use serde_json::{Value, json};
 
-use crate::{CliFailure, RunOutcome, run_history::open_database};
+use crate::{
+    CliFailure, RunOutcome,
+    run_history::{open_database, open_readonly_database},
+};
 
 #[derive(Clone, Debug, Args)]
 pub(super) struct AdoptRunArgs {
@@ -107,7 +110,7 @@ pub(super) fn clone_scenario(args: &CloneScenarioArgs) -> Result<RunOutcome, Cli
 }
 
 pub(super) fn show(args: &ShowScenarioArgs) -> Result<RunOutcome, CliFailure> {
-    let store = open_database(&args.database)?;
+    let store = open_readonly_database(&args.database)?;
     let loaded = load_scenario(&store, args.scenario_id).map_err(|error| failure(&error))?;
     let lineage = loaded.lineage().map(|parent| {
         json!({

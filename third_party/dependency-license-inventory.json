@@ -3,7 +3,7 @@
   "scope": "All registry dependencies in Cargo.lock and frontend/package-lock.json, including build, test, and platform-optional packages; not a binary SBOM.",
   "license_metadata_policy": "Declared expressions are preserved verbatim; they do not replace upstream license texts, copyright notices, or component-level review.",
   "lockfiles": {
-    "Cargo.lock": "58e6da22765db43ea169f37bb9d23f6c4c2805c08382f3c1a7c560e31c9443ba",
+    "Cargo.lock": "6f2c20313bc5b801b5375546be7171732550d6a8406f19f55d306ed9a15b664f",
     "frontend/package-lock.json": "657e7098471582766ecc2f9b109e64713729ff2968aa46a756f319d597c76218"
   },
   "rust": [
@@ -2101,11 +2101,25 @@
       "checksum_sha256": "219c5811de6525e5416c7d5d53bb656d3afdbc6c5af816e0802bcfa42dbdc1c3"
     },
     {
+      "name": "rfd",
+      "version": "0.16.0",
+      "license_declared": "MIT",
+      "source": "https://crates.io/crates/rfd/0.16.0",
+      "checksum_sha256": "a15ad77d9e70a92437d8f74c35d99b4e4691128df018833e99f90bcd36152672"
+    },
+    {
       "name": "rusqlite",
       "version": "0.37.0",
       "license_declared": "MIT",
       "source": "https://crates.io/crates/rusqlite/0.37.0",
       "checksum_sha256": "165ca6e57b20e1351573e3729b958bc62f0e48025386970b6e4d29e7a7e71f3f"
+    },
+    {
+      "name": "rust_xlsxwriter",
+      "version": "0.99.0",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/rust_xlsxwriter/0.99.0",
+      "checksum_sha256": "c073c0bd3868defc46035bf95b2e70389cefc59c528b8674fe90594c9c2b3f6f"
     },
     {
       "name": "rustc-hash",
@@ -2512,6 +2526,27 @@
       "license_declared": "Apache-2.0 OR MIT",
       "source": "https://crates.io/crates/tauri-macros/2.6.3",
       "checksum_sha256": "e8b394794f399a421811d06966343e7933fcae92d59f5180b9388d1174497a45"
+    },
+    {
+      "name": "tauri-plugin",
+      "version": "2.6.3",
+      "license_declared": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/tauri-plugin/2.6.3",
+      "checksum_sha256": "74be5dd4bed9afbd145e5716b5fa2ec28cbc29c34ffa61c258c9273d896c8020"
+    },
+    {
+      "name": "tauri-plugin-dialog",
+      "version": "2.7.2",
+      "license_declared": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/tauri-plugin-dialog/2.7.2",
+      "checksum_sha256": "b2d3c1dbe38037e7f590cdf2492594d5ceebe031e7bc7e827509b22a999d2940"
+    },
+    {
+      "name": "tauri-plugin-fs",
+      "version": "2.5.2",
+      "license_declared": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/tauri-plugin-fs/2.5.2",
+      "checksum_sha256": "de22eef34fd78c0da050e748710edd50bf127e651d02ea1b2bfada1523cc5c51"
     },
     {
       "name": "tauri-runtime",
@@ -3194,6 +3229,13 @@
     },
     {
       "name": "windows-sys",
+      "version": "0.60.2",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows-sys/0.60.2",
+      "checksum_sha256": "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
+    },
+    {
+      "name": "windows-sys",
       "version": "0.61.2",
       "license_declared": "MIT OR Apache-2.0",
       "source": "https://crates.io/crates/windows-sys/0.61.2",
@@ -3212,6 +3254,13 @@
       "license_declared": "MIT OR Apache-2.0",
       "source": "https://crates.io/crates/windows-targets/0.52.6",
       "checksum_sha256": "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973"
+    },
+    {
+      "name": "windows-targets",
+      "version": "0.53.5",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows-targets/0.53.5",
+      "checksum_sha256": "4945f9f551b88e0d65f3db0bc25c33b8acea4d9e41163edf90dcd0b19f9069f3"
     },
     {
       "name": "windows-threading",
@@ -3242,6 +3291,13 @@
       "checksum_sha256": "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3"
     },
     {
+      "name": "windows_aarch64_gnullvm",
+      "version": "0.53.1",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows_aarch64_gnullvm/0.53.1",
+      "checksum_sha256": "a9d8416fa8b42f5c947f8482c43e7d89e73a173cead56d044f6a56104a6d1b53"
+    },
+    {
       "name": "windows_aarch64_msvc",
       "version": "0.42.2",
       "license_declared": "MIT OR Apache-2.0",
@@ -3254,6 +3310,13 @@
       "license_declared": "MIT OR Apache-2.0",
       "source": "https://crates.io/crates/windows_aarch64_msvc/0.52.6",
       "checksum_sha256": "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469"
+    },
+    {
+      "name": "windows_aarch64_msvc",
+      "version": "0.53.1",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows_aarch64_msvc/0.53.1",
+      "checksum_sha256": "b9d782e804c2f632e395708e99a94275910eb9100b2114651e04744e9b125006"
     },
     {
       "name": "windows_i686_gnu",
@@ -3270,11 +3333,25 @@
       "checksum_sha256": "8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b"
     },
     {
+      "name": "windows_i686_gnu",
+      "version": "0.53.1",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows_i686_gnu/0.53.1",
+      "checksum_sha256": "960e6da069d81e09becb0ca57a65220ddff016ff2d6af6a223cf372a506593a3"
+    },
+    {
       "name": "windows_i686_gnullvm",
       "version": "0.52.6",
       "license_declared": "MIT OR Apache-2.0",
       "source": "https://crates.io/crates/windows_i686_gnullvm/0.52.6",
       "checksum_sha256": "0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66"
+    },
+    {
+      "name": "windows_i686_gnullvm",
+      "version": "0.53.1",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows_i686_gnullvm/0.53.1",
+      "checksum_sha256": "fa7359d10048f68ab8b09fa71c3daccfb0e9b559aed648a8f95469c27057180c"
     },
     {
       "name": "windows_i686_msvc",
@@ -3291,6 +3368,13 @@
       "checksum_sha256": "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66"
     },
     {
+      "name": "windows_i686_msvc",
+      "version": "0.53.1",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows_i686_msvc/0.53.1",
+      "checksum_sha256": "1e7ac75179f18232fe9c285163565a57ef8d3c89254a30685b57d83a38d326c2"
+    },
+    {
       "name": "windows_x86_64_gnu",
       "version": "0.42.2",
       "license_declared": "MIT OR Apache-2.0",
@@ -3303,6 +3387,13 @@
       "license_declared": "MIT OR Apache-2.0",
       "source": "https://crates.io/crates/windows_x86_64_gnu/0.52.6",
       "checksum_sha256": "147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78"
+    },
+    {
+      "name": "windows_x86_64_gnu",
+      "version": "0.53.1",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows_x86_64_gnu/0.53.1",
+      "checksum_sha256": "9c3842cdd74a865a8066ab39c8a7a473c0778a3f29370b5fd6b4b9aa7df4a499"
     },
     {
       "name": "windows_x86_64_gnullvm",
@@ -3319,6 +3410,13 @@
       "checksum_sha256": "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d"
     },
     {
+      "name": "windows_x86_64_gnullvm",
+      "version": "0.53.1",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows_x86_64_gnullvm/0.53.1",
+      "checksum_sha256": "0ffa179e2d07eee8ad8f57493436566c7cc30ac536a3379fdf008f47f6bb7ae1"
+    },
+    {
       "name": "windows_x86_64_msvc",
       "version": "0.42.2",
       "license_declared": "MIT OR Apache-2.0",
@@ -3331,6 +3429,13 @@
       "license_declared": "MIT OR Apache-2.0",
       "source": "https://crates.io/crates/windows_x86_64_msvc/0.52.6",
       "checksum_sha256": "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+    },
+    {
+      "name": "windows_x86_64_msvc",
+      "version": "0.53.1",
+      "license_declared": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/windows_x86_64_msvc/0.53.1",
+      "checksum_sha256": "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
     },
     {
       "name": "winnow",

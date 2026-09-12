@@ -33,6 +33,7 @@ sha2 = "=0.10.9"
 solver-client = { path = "../../../crates/solver-client" }
 solver-contract = { path = "../../../crates/solver-contract" }
 tauri.workspace = true
+tauri-plugin-dialog = "=2.7.2"
 uuid.workspace = true
 
 [dev-dependencies]

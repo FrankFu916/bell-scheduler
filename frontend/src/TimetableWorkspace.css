@@ -20,6 +20,13 @@
 .timetable-error p { margin: 8px 0; }
 .timetable-result-meta { flex-wrap: wrap; margin: 20px 0 12px; }
 .timetable-result-meta span { color: #51697a; font-size: .85rem; }
+.timetable-export { margin: 12px 0 18px; padding: 14px 16px; border: 1px solid #cbdde4; border-radius: 10px; background: #f5fafb; }
+.timetable-export-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: .9rem; }
+.timetable-export-actions > div { flex: 1; min-width: 220px; }
+.timetable-export-actions p, .timetable-export-status p { margin: 6px 0 0; color: #52697e; font-size: .85rem; line-height: 1.65; overflow-wrap: anywhere; }
+.timetable-export-actions button { padding: 9px 12px; border: 1px solid #aac5d2; border-radius: 8px; background: #fff; color: #254e70; }
+.timetable-export-actions .timetable-export-primary { background: #245e75; border-color: #245e75; color: #fff; }
+.timetable-export .timetable-error { margin-top: 12px; }
 .timetable-grid-scroll, .timetable-list-scroll { overflow: auto; border: 1px solid #d8e2eb; border-radius: 10px; }
 .timetable-grid, .timetable-list { border-collapse: collapse; width: 100%; font-size: .86rem; }
 .timetable-grid { table-layout: fixed; min-width: 760px; }
