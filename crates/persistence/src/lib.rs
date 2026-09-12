@@ -11,7 +11,7 @@ use std::path::Path;
 
 use blake3::Hash;
 use chrono::{DateTime, SecondsFormat, Utc};
-use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -208,6 +208,39 @@ impl SqliteStore {
     pub fn open(path: impl AsRef<Path>) -> Result<Self, PersistenceError> {
         let connection = Connection::open(path)?;
         Self::from_connection(connection)
+    }
+
+    /// Opens an existing current-schema database without creating it or running migrations.
+    ///
+    /// The connection rejects writes, including calls to the store's mutation methods.
+    ///
+    /// # Errors
+    /// Rejects missing, inaccessible, malformed, or incompatible databases. Older databases must
+    /// be explicitly opened through the normal project workflow before read-only queries resume.
+    pub fn open_readonly(path: impl AsRef<Path>) -> Result<Self, PersistenceError> {
+        let connection = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        connection.pragma_update(None, "foreign_keys", true)?;
+        connection.busy_timeout(std::time::Duration::from_secs(5))?;
+        let store = Self { connection };
+        let found = store.schema_version()?;
+        if found > DATABASE_SCHEMA_VERSION {
+            return Err(PersistenceError::UnsupportedSchema {
+                found,
+                supported: DATABASE_SCHEMA_VERSION,
+            });
+        }
+        if found < DATABASE_SCHEMA_VERSION {
+            return Err(PersistenceError::InvalidDocument {
+                code: "PERSISTENCE_SCHEMA_UPGRADE_REQUIRED",
+                detail: format!(
+                    "read-only access requires schema {DATABASE_SCHEMA_VERSION}; found {found}"
+                ),
+            });
+        }
+        Ok(store)
     }
 
     /// Creates and migrates an isolated in-memory database.

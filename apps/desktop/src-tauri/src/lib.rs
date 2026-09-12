@@ -25,6 +25,7 @@ pub mod managed_worker;
 mod problem_messages;
 mod project_queries;
 mod scenario_commands;
+mod scenario_timetable_queries;
 mod solve_commands;
 mod timetable_queries;
 
@@ -723,6 +724,8 @@ pub fn run() {
             scenario_commands::copy_saved_scenario,
             scenario_commands::load_saved_scenario,
             scenario_commands::list_saved_scenarios,
+            scenario_timetable_queries::query_scenario_timetable,
+            scenario_timetable_queries::query_scenario_timetable_entities,
             timetable_queries::query_saved_timetable,
             timetable_queries::query_saved_timetable_entities,
         ])

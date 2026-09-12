@@ -5,6 +5,8 @@
 .timetable-eyebrow { color: #486981; font-size: .8rem; letter-spacing: .06em; }
 .timetable-readonly { border-radius: 999px; background: #edf5f3; color: #236753; padding: 6px 12px; font-size: .85rem; }
 .timetable-intro, .timetable-grid-note { color: #52697e; font-size: .9rem; line-height: 1.65; }
+.timetable-version { margin: 7px 0 0; color: #52697e; font-size: .88rem; overflow-wrap: anywhere; }
+.timetable-history-warning { padding: 12px 14px; border: 1px solid #d8bb78; border-radius: 9px; background: #fff7e5; color: #73551e; font-size: .9rem; line-height: 1.6; }
 .timetable-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; margin: 20px 0 12px; }
 .timetable-controls label { display: grid; gap: 6px; font-size: .87rem; font-weight: 600; }
 .timetable-controls select { min-width: 170px; max-width: 360px; padding: 9px 12px; border: 1px solid #b9cad8; border-radius: 8px; background: #fff; font: inherit; color: inherit; }

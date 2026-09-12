@@ -4,19 +4,18 @@ use class_schedule_import::ImportedAudienceKind;
 use class_schedule_scheduling::{Activity, Assignment, DenseBitSet};
 
 use super::{
-    AdministrativeClassId, Day, GradeId, LoadedSolveArtifact, MAXIMUM_TIMETABLE_GRID_CELLS,
-    SelectedTimetable, StudentId, TimetableAudience, TimetableEntityOption, TimetableFilter,
-    TimetableGridCell, TimetableLabel, TimetableQuery, TimetableQueryError, TimetableRow,
-    TimetableView, count, required,
+    AdministrativeClassId, Day, GradeId, MAXIMUM_TIMETABLE_GRID_CELLS, StudentId,
+    TimetableAudience, TimetableEntityOption, TimetableFilter, TimetableGridCell, TimetableLabel,
+    TimetableProjectionInput, TimetableQuery, TimetableQueryError, TimetableRow, TimetableView,
+    count, required,
 };
 use crate::compile::stable_id;
 
 pub(super) fn entities(
-    loaded: &LoadedSolveArtifact,
-    selected: &SelectedTimetable<'_>,
+    input: &TimetableProjectionInput<'_>,
     view: TimetableView,
 ) -> Vec<TimetableEntityOption> {
-    let document = loaded.source_document();
+    let document = input.source;
     let batch = &document.import_batch;
     let key = &document.project_stable_key;
     let mut options: Vec<_> = match view {
@@ -35,7 +34,7 @@ pub(super) fn entities(
                 )
             })
             .collect(),
-        TimetableView::TeachingSection => selected
+        TimetableView::TeachingSection => input
             .sections
             .iter()
             .map(|row| {
@@ -125,11 +124,10 @@ fn option(filter: TimetableFilter, code: &str, name: &str) -> TimetableEntityOpt
 }
 
 fn student_mask(
-    loaded: &LoadedSolveArtifact,
-    selected: &SelectedTimetable<'_>,
+    input: &TimetableProjectionInput<'_>,
     filter: TimetableFilter,
 ) -> Result<DenseBitSet, TimetableQueryError> {
-    let document = loaded.source_document();
+    let document = input.source;
     let batch = &document.import_batch;
     let key = &document.project_stable_key;
     let classes: BTreeMap<_, _> = batch
@@ -159,8 +157,8 @@ fn student_mask(
         .map(|student| student.student_code.as_str())
         .collect();
     DenseBitSet::from_indices(
-        selected.compiled.problem.students().len(),
-        selected
+        input.compiled.problem.students().len(),
+        input
             .compiled
             .catalog
             .student_codes
@@ -174,7 +172,7 @@ fn student_mask(
 }
 
 fn matches_filter(
-    selected: &SelectedTimetable<'_>,
+    input: &TimetableProjectionInput<'_>,
     assignment: &Assignment,
     activity: &Activity,
     filter: TimetableFilter,
@@ -188,7 +186,7 @@ fn matches_filter(
         TimetableFilter::Subject(id) => activity.subject_id == id,
         TimetableFilter::Teacher(id) => {
             required(
-                selected
+                input
                     .compiled
                     .problem
                     .teachers()
@@ -200,7 +198,7 @@ fn matches_filter(
         }
         TimetableFilter::Room(id) => {
             required(
-                selected
+                input
                     .compiled
                     .problem
                     .rooms()
@@ -214,25 +212,24 @@ fn matches_filter(
 }
 
 pub(super) fn project(
-    loaded: &LoadedSolveArtifact,
-    selected: &SelectedTimetable<'_>,
+    input: &TimetableProjectionInput<'_>,
     query: &TimetableQuery,
 ) -> Result<(Vec<TimetableRow>, Vec<TimetableGridCell>, u32), TimetableQueryError> {
-    let problem = &selected.compiled.problem;
-    let students = student_mask(loaded, selected, query.filter)?;
+    let problem = &input.compiled.problem;
+    let students = student_mask(input, query.filter)?;
     let mut matching = Vec::new();
-    for assignment in &selected.completed.assignments {
+    for assignment in input.assignments {
         let activity = required(
             problem.activities().get(assignment.activity.as_usize()),
             "activity",
         )?;
-        if matches_filter(selected, assignment, activity, query.filter, &students)? {
+        if matches_filter(input, assignment, activity, query.filter, &students)? {
             matching.push((assignment, activity));
         }
     }
     matching.sort_by_key(|(assignment, activity)| (assignment.start.0, activity.stable_id));
     let total_rows = count(matching.len())?;
-    let mut calendar = calendar(loaded, selected)?;
+    let mut calendar = calendar(input)?;
     let mut rows = Vec::new();
     for (position, (assignment, activity)) in matching.into_iter().enumerate() {
         let occupied = problem
@@ -252,8 +249,7 @@ pub(super) fn project(
         }
         if visible {
             rows.push(row(
-                loaded,
-                selected,
+                input,
                 assignment,
                 activity,
                 occupied.into_iter().map(|slot| slot.0).collect(),
@@ -264,15 +260,14 @@ pub(super) fn project(
 }
 
 fn calendar(
-    loaded: &LoadedSolveArtifact,
-    selected: &SelectedTimetable<'_>,
+    input: &TimetableProjectionInput<'_>,
 ) -> Result<Vec<TimetableGridCell>, TimetableQueryError> {
-    let slots = selected.compiled.problem.timeslots();
+    let slots = input.compiled.problem.timeslots();
     if slots.len() > MAXIMUM_TIMETABLE_GRID_CELLS {
         return Err(TimetableQueryError::ResourceLimit);
     }
-    let periods: BTreeMap<_, _> = loaded
-        .source_document()
+    let periods: BTreeMap<_, _> = input
+        .source
         .calendar
         .periods
         .iter()
@@ -306,16 +301,15 @@ fn label<Id>(id: Id, code: &str, name: &str) -> TimetableLabel<Id> {
 }
 
 fn row(
-    loaded: &LoadedSolveArtifact,
-    selected: &SelectedTimetable<'_>,
+    input: &TimetableProjectionInput<'_>,
     assignment: &Assignment,
     activity: &Activity,
     occupied_timeslot_indices: Vec<u32>,
 ) -> Result<TimetableRow, TimetableQueryError> {
-    let document = loaded.source_document();
+    let document = input.source;
     let batch = &document.import_batch;
     let key = &document.project_stable_key;
-    let catalog = &selected.compiled.catalog;
+    let catalog = &input.compiled.catalog;
     let activity_label = required(
         catalog.activities.get(assignment.activity.as_usize()),
         "activity_label",
@@ -347,7 +341,7 @@ fn row(
         "room_label",
     )?;
     let slot = required(
-        selected
+        input
             .compiled
             .problem
             .timeslots()
@@ -362,7 +356,7 @@ fn row(
             .find(|period| period.index == slot.period_index),
         "period",
     )?;
-    let audience = audience(loaded, selected, activity, activity_label)?;
+    let audience = audience(input, activity, activity_label)?;
     Ok(TimetableRow {
         activity_id: activity.stable_id,
         activity_index: assignment.activity.0,
@@ -394,12 +388,11 @@ fn row(
 }
 
 fn audience(
-    loaded: &LoadedSolveArtifact,
-    selected: &SelectedTimetable<'_>,
+    input: &TimetableProjectionInput<'_>,
     activity: &Activity,
     activity_label: &crate::CompiledActivityLabel,
 ) -> Result<TimetableAudience, TimetableQueryError> {
-    let batch = &loaded.source_document().import_batch;
+    let batch = &input.source.import_batch;
     Ok(match activity_label.audience_kind {
         ImportedAudienceKind::AdministrativeClass => {
             let class = required(
@@ -417,7 +410,7 @@ fn audience(
         }
         ImportedAudienceKind::TeachingSection => {
             let section = required(
-                selected
+                input
                     .sections
                     .iter()
                     .find(|row| row.section_code == activity_label.audience_code),

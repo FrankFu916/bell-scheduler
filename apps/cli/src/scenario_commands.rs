@@ -128,7 +128,7 @@ pub(super) fn show(args: &ShowScenarioArgs) -> Result<RunOutcome, CliFailure> {
     }))
 }
 
-fn receipt_dto(receipt: &ScenarioReceipt) -> Value {
+pub(super) fn receipt_dto(receipt: &ScenarioReceipt) -> Value {
     json!({
         "project_id": receipt.project_id.to_string(),
         "source_project_revision": receipt.source_project_revision.to_string(),
@@ -155,7 +155,7 @@ fn hex(bytes: &[u8; 32]) -> String {
         })
 }
 
-fn render(summary: &Value) -> Result<RunOutcome, CliFailure> {
+pub(super) fn render(summary: &Value) -> Result<RunOutcome, CliFailure> {
     Ok(RunOutcome {
         rendered_summary: serde_json::to_string_pretty(summary).map_err(|_| {
             CliFailure::new(

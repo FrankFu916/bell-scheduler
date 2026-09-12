@@ -16,6 +16,7 @@
 
 ```sh
 rustup toolchain install 1.88.0 --profile minimal --component rustfmt --component clippy
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 rustc +1.88.0 --version
 cargo +1.88.0 --version
 node --version
@@ -23,7 +24,7 @@ cmake --version
 python3 --version
 ```
 
-如果只运行 Rust 和前端检查，可使用系统安装的 `protoc`，先确认 `protoc --version` 能成功执行。Linux 所需的 `protobuf-compiler` 和 Tauri 系统开发包列在 CI 的安装步骤中。
+上面的 PATH 设置使 `cargo +1.88.0` 使用 rustup 启动器；同时安装了 Homebrew Rust 等工具链时，也应核对实际版本。如果只运行 Rust 和前端检查，可使用系统安装的 `protoc`，先确认 `protoc --version` 能成功执行。Linux 所需的 `protobuf-compiler` 和 Tauri 系统开发包列在 CI 的安装步骤中。
 
 ## 下载和构建 OR-Tools worker
 
@@ -132,6 +133,8 @@ target/rust-1.88.0/debug/class-schedule-cli solve \
 检查输出目录内的 `summary.json`。可用课表要求 `result.publishable` 和 `result.hard_valid` 均为 `true`，且 `provenance.validation_result` 为 `passed`；通过独立校验后才会输出 `timetable.csv`。对于此 `solve` 命令，退出码 `0` 表示成功提供课表，`3` 表示没有可发布课表，`2` 表示命令或处理错误。达到时限、未知、已证明不可行和取消各有独立状态，不能只凭缺少 CSV 判断原因。
 
 该 `solve` 命令从 CSV 直接求解和导出。SQLite 项目流程使用 `import`、`solve-project`、`list-runs` 和 `export-run`；采用及复制使用 `adopt-run`、`clone-scenario` 和 `show-scenario`。通过对应子命令的 `--help` 查看必需参数。
+
+`scenario-timetable` 可读取已采用方案的七种课表视图。提供方案 ID、预期方案版本、预期课表版本和 `--view` 后，会列出可选择的对象；再添加返回的 `--entity-id` 即可读取该对象的课次和完整周格。支持分页，单页上限为 100。此命令使用只读数据库连接，不启动求解器，也不会迁移或改写数据库；旧数据库需先通过正常项目打开流程升级。
 
 ## 提交前检查与代码边界
 

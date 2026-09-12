@@ -4,8 +4,8 @@ use std::fmt::Display;
 
 use class_schedule_application::{
     MAXIMUM_TIMETABLE_PAGE_SIZE, SavedTimetablePage, TimetableAudience, TimetableEntityOption,
-    TimetableFilter, TimetableLabel, TimetableQuery, TimetableQueryError, TimetableRow,
-    TimetableView,
+    TimetableFilter, TimetableGridCell, TimetableLabel, TimetableQuery, TimetableQueryError,
+    TimetableRow, TimetableView,
 };
 use class_schedule_domain::Day;
 use serde::{Deserialize, Serialize};
@@ -36,6 +36,20 @@ impl From<TimetableViewDto> for TimetableView {
             TimetableViewDto::Student => Self::Student,
             TimetableViewDto::Subject => Self::Subject,
             TimetableViewDto::Grade => Self::Grade,
+        }
+    }
+}
+
+impl From<TimetableView> for TimetableViewDto {
+    fn from(view: TimetableView) -> Self {
+        match view {
+            TimetableView::AdministrativeClass => Self::AdministrativeClass,
+            TimetableView::TeachingSection => Self::TeachingSection,
+            TimetableView::Teacher => Self::Teacher,
+            TimetableView::Room => Self::Room,
+            TimetableView::Student => Self::Student,
+            TimetableView::Subject => Self::Subject,
+            TimetableView::Grade => Self::Grade,
         }
     }
 }
@@ -189,6 +203,25 @@ pub struct TimetableGridCellDto {
     pub page_activity_ids: Vec<String>,
 }
 
+impl From<TimetableGridCell> for TimetableGridCellDto {
+    fn from(cell: TimetableGridCell) -> Self {
+        Self {
+            timeslot_index: cell.timeslot_index,
+            day: day_code(cell.day),
+            day_label: cell.day_label,
+            period_index: cell.period_index,
+            period_label: cell.period_label,
+            instructional_block: cell.instructional_block,
+            occupied_count: cell.occupied_count,
+            page_activity_ids: cell
+                .page_activity_ids
+                .into_iter()
+                .map(|id| id.to_string())
+                .collect(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimetableMetricDto {
@@ -247,24 +280,7 @@ impl From<SavedTimetablePage> for SavedTimetableResponse {
             selected_attempt_index: page.selected_attempt_index,
             selection: page.selection.into(),
             rows: page.rows.into_iter().map(Into::into).collect(),
-            calendar: page
-                .calendar
-                .into_iter()
-                .map(|cell| TimetableGridCellDto {
-                    timeslot_index: cell.timeslot_index,
-                    day: day_code(cell.day),
-                    day_label: cell.day_label,
-                    period_index: cell.period_index,
-                    period_label: cell.period_label,
-                    instructional_block: cell.instructional_block,
-                    occupied_count: cell.occupied_count,
-                    page_activity_ids: cell
-                        .page_activity_ids
-                        .into_iter()
-                        .map(|id| id.to_string())
-                        .collect(),
-                })
-                .collect(),
+            calendar: page.calendar.into_iter().map(Into::into).collect(),
             total_rows: page.total_rows,
             offset: page.offset,
             has_more: page.has_more,
@@ -360,6 +376,10 @@ fn validate_request(
             "请选择有效的已保存运行。",
         )
     })?;
+    validate_page(offset, limit)
+}
+
+pub(super) fn validate_page(offset: u32, limit: u32) -> Result<(), CommandError> {
     if !(1..=MAXIMUM_TIMETABLE_PAGE_SIZE).contains(&limit) || offset.checked_add(limit).is_none() {
         return Err(CommandError::new(
             "APPLICATION_TIMETABLE_INVALID_PAGE",
@@ -376,13 +396,24 @@ fn decode_query(request: &SavedTimetableRequest) -> Result<TimetableQuery, Comma
         request.offset,
         request.limit,
     )?;
-    let id = canonical_uuid(&request.entity_id).map_err(|()| {
+    Ok(TimetableQuery {
+        filter: decode_filter(request.view, &request.entity_id)?,
+        offset: request.offset,
+        limit: request.limit,
+    })
+}
+
+pub(super) fn decode_filter(
+    view: TimetableViewDto,
+    entity_id: &str,
+) -> Result<TimetableFilter, CommandError> {
+    let id = canonical_uuid(entity_id).map_err(|()| {
         CommandError::new(
             "DESKTOP_TIMETABLE_ENTITY_ID_INVALID",
             "请先选择该视图中的班级、教师、教室、学生、学科或年级。",
         )
     })?;
-    let filter = match request.view {
+    Ok(match view {
         TimetableViewDto::AdministrativeClass => TimetableFilter::AdministrativeClass(id.into()),
         TimetableViewDto::TeachingSection => TimetableFilter::TeachingSection(id.into()),
         TimetableViewDto::Teacher => TimetableFilter::Teacher(id.into()),
@@ -390,11 +421,6 @@ fn decode_query(request: &SavedTimetableRequest) -> Result<TimetableQuery, Comma
         TimetableViewDto::Student => TimetableFilter::Student(id.into()),
         TimetableViewDto::Subject => TimetableFilter::Subject(id.into()),
         TimetableViewDto::Grade => TimetableFilter::Grade(id.into()),
-    };
-    Ok(TimetableQuery {
-        filter,
-        offset: request.offset,
-        limit: request.limit,
     })
 }
 

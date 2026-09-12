@@ -13,10 +13,13 @@ export const TIMETABLE_VIEWS = [
 export type TimetableView = typeof TIMETABLE_VIEWS[number]["value"];
 export type TimetableDay = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 export interface TimetableEntity { readonly id: string; readonly code: string; readonly label: string }
-export interface TimetableEntityPage {
-  readonly schemaVersion: 1; readonly runId: string; readonly view: TimetableView;
+export interface TimetableEntityPageContent {
+  readonly view: TimetableView;
   readonly entities: readonly TimetableEntity[]; readonly totalEntities: number;
   readonly offset: number; readonly hasMore: boolean; readonly nextOffset: number | null;
+}
+export interface TimetableEntityPage extends TimetableEntityPageContent {
+  readonly schemaVersion: 1; readonly runId: string;
 }
 export interface TimetableRow {
   readonly activityId: string; readonly activityIndex: number; readonly courseOfferingId: string;
@@ -38,15 +41,19 @@ export interface TimetableMetric {
 export interface TimetableQualityTier {
   readonly id: string; readonly priority: number; readonly value: string; readonly metrics: readonly TimetableMetric[];
 }
-export interface SavedTimetablePage {
-  readonly schemaVersion: 1; readonly runId: string; readonly projectId: string; readonly projectRevision: string;
-  readonly projectDisplayName: string; readonly sourcePayloadHash: string; readonly artifactPayloadHash: string;
-  readonly inputSnapshotHash: string; readonly outputHash: string; readonly adopted: false;
-  readonly selectedAttemptIndex: number | null; readonly selection: TimetableEntity;
+export interface TimetablePageContent {
+  readonly selection: TimetableEntity;
   readonly rows: readonly TimetableRow[]; readonly calendar: readonly TimetableGridCell[];
   readonly totalRows: number; readonly offset: number; readonly hasMore: boolean; readonly nextOffset: number | null;
   readonly quality: readonly TimetableQualityTier[];
 }
+interface SavedTimetableEnvelope {
+  readonly schemaVersion: 1; readonly runId: string; readonly projectId: string; readonly projectRevision: string;
+  readonly projectDisplayName: string; readonly sourcePayloadHash: string; readonly artifactPayloadHash: string;
+  readonly inputSnapshotHash: string; readonly outputHash: string; readonly adopted: false;
+  readonly selectedAttemptIndex: number | null;
+}
+export interface SavedTimetablePage extends SavedTimetableEnvelope, TimetablePageContent {}
 
 const days = new Set(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]);
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -89,34 +96,52 @@ function invalidResponse(): never {
   throw { schemaVersion: 1, code: "DESKTOP_TIMETABLE_INVALID_RESPONSE", message: "课表数据格式或运行身份不一致，请重新打开已保存运行。", details: null };
 }
 
-export function parseTimetableEntityPage(value: unknown): TimetableEntityPage {
-  if (!record(value) || value.schemaVersion !== 1 || !uuid(value.runId) || !view(value.view) || !page(value) ||
-      !Array.isArray(value.entities) || value.entities.length > 100 || !value.entities.every(entity) || !integer(value.totalEntities)) {
-    return invalidResponse();
-  }
-  return value as unknown as TimetableEntityPage;
+export function isTimetableEntityPageContent(value: unknown): value is TimetableEntityPageContent {
+  return record(value) && view(value.view) && page(value) && Array.isArray(value.entities) &&
+    value.entities.length <= 100 && value.entities.every(entity) && integer(value.totalEntities) &&
+    value.entities.length <= value.totalEntities && new Set(value.entities.map((item) => item.id)).size === value.entities.length;
 }
 
-export function parseSavedTimetablePage(value: unknown): SavedTimetablePage {
-  if (!record(value) || value.schemaVersion !== 1 || !uuid(value.runId) || !uuid(value.projectId) ||
-      !decimal(value.projectRevision) || value.projectRevision.startsWith("-") || !text(value.projectDisplayName) ||
-      !hash(value.sourcePayloadHash) || !hash(value.artifactPayloadHash) || !hash(value.inputSnapshotHash) || !hash(value.outputHash) ||
-      value.adopted !== false || !(value.selectedAttemptIndex === null || integer(value.selectedAttemptIndex) && value.selectedAttemptIndex < 16) ||
-      !entity(value.selection) || !page(value) || !integer(value.totalRows) || !Array.isArray(value.rows) || value.rows.length > 100 ||
+export function isTimetablePageContent(value: unknown): value is TimetablePageContent {
+  if (!record(value) || !entity(value.selection) || !page(value) || !integer(value.totalRows) || !Array.isArray(value.rows) ||
+      value.rows.length > 100 || value.rows.length > value.totalRows ||
       !value.rows.every(row) || !Array.isArray(value.calendar) || value.calendar.length === 0 || value.calendar.length > 4096 ||
       !value.calendar.every(cell) || !Array.isArray(value.quality) || !value.quality.every(tier)) {
-    return invalidResponse();
+    return false;
   }
   const rows = value.rows as TimetableRow[];
   const calendar = value.calendar as TimetableGridCell[];
   const rowIds = new Set(rows.map((item) => item.activityId));
   const slotIds = new Set(calendar.map((item) => item.timeslotIndex));
-  if (rowIds.size !== rows.length || slotIds.size !== calendar.length ||
-      calendar.some((item) => item.pageActivityIds.some((id) => !rowIds.has(id))) ||
-      rows.some((item) => item.occupiedTimeslotIndices.some((index) => !slotIds.has(index)))) {
-    return invalidResponse();
-  }
-  return value as unknown as SavedTimetablePage;
+  const rowMap = new Map(rows.map((item) => [item.activityId, item]));
+  const cellMap = new Map(calendar.map((item) => [item.timeslotIndex, item]));
+  return rowIds.size === rows.length && slotIds.size === calendar.length &&
+    calendar.every((item) => new Set(item.pageActivityIds).size === item.pageActivityIds.length &&
+      item.pageActivityIds.every((id) => rowMap.get(id)?.occupiedTimeslotIndices.includes(item.timeslotIndex))) &&
+    rows.every((item) => item.occupiedTimeslotIndices[0] === item.startTimeslotIndex &&
+      new Set(item.occupiedTimeslotIndices).size === item.durationPeriods &&
+      item.occupiedTimeslotIndices.every((index) => cellMap.get(index)?.pageActivityIds.includes(item.activityId)));
+}
+
+export function parseTimetableEntityPage(value: unknown): TimetableEntityPage {
+  if (!isRunIdentity(value) || !isTimetableEntityPageContent(value)) return invalidResponse();
+  return value;
+}
+
+function isRunIdentity(value: unknown): value is Record<string, unknown> & { readonly schemaVersion: 1; readonly runId: string } {
+  return record(value) && !("receipt" in value) && value.schemaVersion === 1 && uuid(value.runId);
+}
+
+function isSavedTimetableEnvelope(value: unknown): value is SavedTimetableEnvelope {
+  return record(value) && isRunIdentity(value) && uuid(value.projectId) &&
+    decimal(value.projectRevision) && !value.projectRevision.startsWith("-") && text(value.projectDisplayName) &&
+    hash(value.sourcePayloadHash) && hash(value.artifactPayloadHash) && hash(value.inputSnapshotHash) && hash(value.outputHash) &&
+    value.adopted === false && (value.selectedAttemptIndex === null || integer(value.selectedAttemptIndex) && value.selectedAttemptIndex < 16);
+}
+
+export function parseSavedTimetablePage(value: unknown): SavedTimetablePage {
+  if (!isSavedTimetableEnvelope(value) || !isTimetablePageContent(value)) return invalidResponse();
+  return value;
 }
 
 async function native(command: string, request: Record<string, unknown>): Promise<unknown> {

@@ -7,6 +7,7 @@
 mod import_command;
 mod run_history;
 mod scenario_commands;
+mod scenario_timetable;
 mod solve_project;
 
 use std::collections::BTreeMap;
@@ -87,6 +88,8 @@ enum Command {
     CloneScenario(scenario_commands::CloneScenarioArgs),
     /// Rebuild and independently validate a saved scenario without launching a worker.
     ShowScenario(scenario_commands::ShowScenarioArgs),
+    /// Read a scenario's revalidated timetable or its selectable entities at explicit revisions.
+    ScenarioTimetable(scenario_timetable::ScenarioTimetableArgs),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -457,6 +460,7 @@ pub fn run(cli: Cli) -> Result<RunOutcome, CliFailure> {
         Command::AdoptRun(args) => scenario_commands::adopt(&args),
         Command::CloneScenario(args) => scenario_commands::clone_scenario(&args),
         Command::ShowScenario(args) => scenario_commands::show(&args),
+        Command::ScenarioTimetable(args) => scenario_timetable::run(&args),
     }
 }
 

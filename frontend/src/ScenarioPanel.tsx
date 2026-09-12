@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { commandError, type CommandError, type ImportedProjectReceipt } from "./api";
 import type { LoadedRun } from "./solveApi";
+import { ScenarioTimetableWorkspace } from "./TimetableWorkspace";
 import { adoptRunAsScenario, canAdoptRun, copySavedScenario, listSavedScenarios, loadSavedScenario,
   type LoadedScenario, type ScenarioPage, type ScenarioReceipt } from "./scenarioApi";
 import "./ScenarioPanel.css";
@@ -98,11 +99,11 @@ export function ScenarioPanel({ project, selectedRun, disabled }: {
     {(offset > 0 || page?.hasMore) && <div className="project-pagination"><button type="button" disabled={offset === 0 || listing || busy} onClick={() => setOffset(Math.max(0, offset - 20))}>上一页</button>
       <span>第 {Math.floor(offset / 20) + 1} 页</span><button type="button" disabled={page?.nextOffset == null || listing || busy} onClick={() => { if (page?.nextOffset != null) setOffset(page.nextOffset); }}>下一页</button></div>}
     {loaded !== null && <section className="scenario-detail" aria-label="已复核方案详情">
-      <h3>{loaded.displayName}</h3><p>已独立复核 · {loaded.activityCount} 次课 · 来源{loaded.sourceIsCurrent ? "为当前数据版本" : "为历史数据版本"}</p>
+      <h3>{loaded.displayName}</h3><p>已独立复核 · {loaded.activityCount} 次课 · 打开时来源{loaded.sourceIsCurrent ? "为当前数据版本" : "为历史数据版本"}</p>
       <p>方案版本 {loaded.receipt.scenarioRevision} · 课表版本 {loaded.receipt.timetableRevision} · 来源数据版本 {loaded.receipt.sourceProjectRevision}</p>
       {loaded.materializedSectionCount > 0 && <p>此方案保存了采用时选定的 {loaded.materializedSectionCount} 个教学班与 {loaded.materializedEnrollmentCount} 条学生成员关系。</p>}
       <div className="scenario-quality" aria-label="重新计算的课表品质">{loaded.quality.map((tier) => <div key={tier.id}><span>品质优先级 {tier.priority}</span><strong>{tier.value}</strong><small>违规代价，越小越好</small></div>)}</div>
-      <p className="scenario-note">此处显示方案的真实保存凭据与品质摘要。原运行课表可在运行历史中单独查看。</p>
+      <p className="scenario-note">下方课表按本方案的独立保存内容查询。原运行课表仍可在运行历史中单独查看。</p>
       {loaded.clonedFrom !== null && <p className="scenario-note">独立复制自方案 <code>{loaded.clonedFrom.scenarioId}</code> 的方案版本 {loaded.clonedFrom.scenarioRevision} / 课表版本 {loaded.clonedFrom.timetableRevision}。</p>}
       <div className="scenario-copy"><label><span>副本名称</span><input value={copyName} maxLength={200} disabled={locked} onChange={(event) => setCopyName(event.target.value)} /></label>
         <button type="button" disabled={locked || !loaded.sourceIsCurrent || copyName.trim().length === 0} onClick={() => { void create(true); }}>创建独立副本</button></div>
@@ -112,6 +113,7 @@ export function ScenarioPanel({ project, selectedRun, disabled }: {
         <dt>课表 ID</dt><dd>{loaded.receipt.timetableId}</dd><dt>课表摘要 · BLAKE3</dt><dd>{loaded.receipt.timetablePayloadHash}</dd>
         <dt>原始运行 ID</dt><dd>{loaded.receipt.originRunId}</dd><dt>原始运行摘要 · BLAKE3</dt><dd>{loaded.receipt.originArtifactHash}</dd>
         <dt>来源数据摘要 · BLAKE3</dt><dd>{loaded.receipt.sourcePayloadHash}</dd></dl></details>
+      <ScenarioTimetableWorkspace receipt={loaded.receipt} displayName={loaded.displayName} sourceIsCurrent={loaded.sourceIsCurrent} />
     </section>}
   </section>;
 }

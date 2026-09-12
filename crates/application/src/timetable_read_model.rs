@@ -6,17 +6,26 @@ use class_schedule_domain::{
 };
 use class_schedule_import::TeachingSectionImportRow;
 use class_schedule_persistence::SqliteStore;
+use class_schedule_scheduling::Assignment;
 use class_schedule_scoring::ObjectiveVector;
 use serde::{Deserialize, Serialize};
 use solver_client::SolverRunStatus;
 use thiserror::Error;
 
 use crate::{
-    AutoSectioningSolveStatus, CompiledSchoolProblem, CompletedSolve, ImportedProjectSolve,
-    LoadedSolveArtifact, SolveArtifactError, SolveExecution, load_solve_artifact,
+    AutoSectioningSolveStatus, CompiledSchoolProblem, CompletedSolve, ImportedProjectDocument,
+    ImportedProjectSolve, LoadedSolveArtifact, SolveArtifactError, SolveExecution,
+    load_solve_artifact,
 };
 
 mod projection;
+mod scenario;
+
+pub use scenario::{
+    SCENARIO_TIMETABLE_READ_MODEL_SCHEMA_VERSION, ScenarioTimetableEntityPage,
+    ScenarioTimetablePage, ScenarioTimetableQueryError, query_scenario_timetable,
+    query_scenario_timetable_entities,
+};
 
 pub const TIMETABLE_READ_MODEL_SCHEMA_VERSION: u32 = 1;
 pub const MAXIMUM_TIMETABLE_PAGE_SIZE: u32 = 100;
@@ -212,13 +221,14 @@ pub fn query_saved_timetable(
     let next = validate_page(query.limit, query.offset)?;
     let loaded = load_solve_artifact(store, run_id)?;
     let selected = selected_timetable(&loaded)?;
-    let selection = projection::entities(&loaded, &selected, query.filter.view())
+    let input = selected.projection_input(loaded.source_document());
+    let selection = projection::entities(&input, query.filter.view())
         .into_iter()
         .find(|option| option.filter == query.filter)
         .ok_or(TimetableQueryError::EntityNotFound {
             view: query.filter.view(),
         })?;
-    let (rows, calendar, total_rows) = projection::project(&loaded, &selected, query)?;
+    let (rows, calendar, total_rows) = projection::project(&input, query)?;
     let has_more = next < total_rows;
     Ok(SavedTimetablePage {
         schema_version: TIMETABLE_READ_MODEL_SCHEMA_VERSION,
@@ -267,7 +277,8 @@ pub fn query_saved_timetable_entities(
     let next = validate_page(limit, offset)?;
     let loaded = load_solve_artifact(store, run_id)?;
     let selected = selected_timetable(&loaded)?;
-    let entities = projection::entities(&loaded, &selected, view);
+    let input = selected.projection_input(loaded.source_document());
+    let entities = projection::entities(&input, view);
     let total_entities = count(entities.len())?;
     let has_more = next < total_entities;
     Ok(TimetableEntityPage {
@@ -292,6 +303,28 @@ struct SelectedTimetable<'a> {
     quality: &'a ObjectiveVector,
     sections: &'a [TeachingSectionImportRow],
     attempt_index: Option<usize>,
+}
+
+/// Borrowed, revalidated business input. Projection has no dependency on a run or Scenario ID.
+struct TimetableProjectionInput<'a> {
+    source: &'a ImportedProjectDocument,
+    compiled: &'a CompiledSchoolProblem,
+    assignments: &'a [Assignment],
+    sections: &'a [TeachingSectionImportRow],
+}
+
+impl<'a> SelectedTimetable<'a> {
+    fn projection_input(
+        &self,
+        source: &'a ImportedProjectDocument,
+    ) -> TimetableProjectionInput<'a> {
+        TimetableProjectionInput {
+            source,
+            compiled: self.compiled,
+            assignments: &self.completed.assignments,
+            sections: self.sections,
+        }
+    }
 }
 
 fn selected_timetable(

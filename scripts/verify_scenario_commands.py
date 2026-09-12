@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Verify adoption/copy/reload using an isolated backup of real saved-run fixtures.
+"""Verify adoption/copy/reload and read-only views using isolated real saved-run fixtures.
 
 This script never modifies the supplied database and never invents solver output.
 Provide a fixture database containing successful native A and B runs for coverage of both modes.
 """
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
@@ -38,6 +39,52 @@ def main():
             assert completed.returncode == 2, (command, completed.returncode)
             assert report["code"] == expected_code, (command, report)
         return report
+
+    def query_views(receipt, summary):
+        before = hashlib.sha256(database.read_bytes()).hexdigest()
+        common = ["--scenario-id", receipt["scenario_id"],
+                  "--expected-scenario-revision", receipt["scenario_revision"],
+                  "--expected-timetable-revision", receipt["timetable_revision"]]
+        views = {}
+        for view in ("administrative-class", "teaching-section", "teacher", "room", "student", "subject", "grade"):
+            options = invoke("scenario-timetable", *common, "--view", view)
+            assert options["scenario"] == receipt and options["source_is_current"]
+            assert options["entities"], (receipt["scenario_id"], view)
+            selected = options["entities"][0]
+            entity_id = selected["filter"]["id"]
+            page = invoke("scenario-timetable", *common, "--view", view, "--entity-id", entity_id, "--limit", 100)
+            assert page["scenario"] == receipt and page["selection"] == selected
+            assert page["quality"] == summary["quality"]
+            assert page["validation"] == "independently_revalidated"
+            assert not page["has_more"] and len(page["rows"]) == page["total_rows"]
+            assert page["calendar"]
+            if view == "grade":
+                assert page["total_rows"] == summary["activity_count"]
+            if view == "student":
+                rows, offset = [], 0
+                full_counts = {cell["timeslot_index"]: cell["occupied_count"] for cell in page["calendar"]}
+                while True:
+                    part = invoke("scenario-timetable", *common, "--view", view, "--entity-id", entity_id,
+                                  "--limit", 3, "--offset", offset)
+                    assert {cell["timeslot_index"]: cell["occupied_count"] for cell in part["calendar"]} == full_counts
+                    rows.extend(part["rows"])
+                    if not part["has_more"]:
+                        break
+                    assert part["next_offset"] > offset
+                    offset = part["next_offset"]
+                assert rows == page["rows"]
+            views[view] = page["total_rows"]
+        for flag, code in (("--expected-scenario-revision", "APPLICATION_SCENARIO_REVISION_CONFLICT"),
+                           ("--expected-timetable-revision", "APPLICATION_TIMETABLE_REVISION_CONFLICT")):
+            stale = common.copy()
+            stale[stale.index(flag) + 1] = "9007199254740993"
+            invoke("scenario-timetable", *stale, "--view", "grade", expected_code=code)
+        invoke("scenario-timetable", *common, "--view", "student", "--entity-id", str(uuid.uuid4()),
+               expected_code="APPLICATION_TIMETABLE_ENTITY_NOT_FOUND")
+        invoke("scenario-timetable", *common, "--view", "grade", "--limit", 101,
+               expected_code="APPLICATION_TIMETABLE_INVALID_PAGE")
+        assert hashlib.sha256(database.read_bytes()).hexdigest() == before
+        return views
 
     with sqlite3.connect(database) as store:
         sources_before = store.execute("SELECT project_id, current_revision FROM projects ORDER BY project_id").fetchall()
@@ -72,10 +119,13 @@ def main():
         invoke("clone-scenario", *stale, expected_code="APPLICATION_SCENARIO_REVISION_CONFLICT")
         assert invoke("show-scenario", "--scenario-id", scenario_id) == shown
         assert invoke("show-scenario", "--scenario-id", clone_id) == clone_shown
+        views = query_views(adopted, shown)
+        assert query_views(cloned, clone_shown) == views
         evidence.append({"runId": run_id, "scenarioId": scenario_id, "cloneId": clone_id,
                          "hardValid": True, "activityCount": shown["activity_count"],
                          "materializedSectioning": shown["has_materialized_sectioning"],
-                         "duplicateAndStaleRejected": True})
+                         "duplicateAndStaleRejected": True, "viewRowCounts": views,
+                         "readQueriesPreservedDatabaseBytes": True})
     with sqlite3.connect(database) as store:
         assert sources_before == store.execute("SELECT project_id, current_revision FROM projects ORDER BY project_id").fetchall()
         assert revisions_before == store.execute("SELECT project_id, revision, payload_hash FROM project_revisions ORDER BY project_id, revision").fetchall()

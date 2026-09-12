@@ -37,6 +37,14 @@ pub(super) struct ExportRunArgs {
 }
 
 pub(super) fn open_database(path: &Path) -> Result<SqliteStore, CliFailure> {
+    open_existing_database(path, false)
+}
+
+pub(super) fn open_readonly_database(path: &Path) -> Result<SqliteStore, CliFailure> {
+    open_existing_database(path, true)
+}
+
+fn open_existing_database(path: &Path, readonly: bool) -> Result<SqliteStore, CliFailure> {
     let metadata = fs::symlink_metadata(path).map_err(|_| {
         CliFailure::new(
             "CLI_DATABASE_NOT_ACCESSIBLE",
@@ -49,7 +57,12 @@ pub(super) fn open_database(path: &Path) -> Result<SqliteStore, CliFailure> {
             "project database must be a regular file",
         ));
     }
-    SqliteStore::open(path)
+    let result = if readonly {
+        SqliteStore::open_readonly(path)
+    } else {
+        SqliteStore::open(path)
+    };
+    result
         .map_err(|error| CliFailure::new(error.code(), "cannot open the existing project database"))
 }
 
