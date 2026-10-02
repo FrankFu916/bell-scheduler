@@ -2,6 +2,7 @@ import { desktopInvoke, type ImportedProjectReceipt } from "./api.ts";
 
 export type SolverStatus = "Optimal" | "Feasible" | "ProvenInfeasible" | "Timeout" | "Unknown" | "Cancelled" | "InvalidInput" | "InvalidModel" | "InternalError";
 const statuses: readonly string[] = ["Optimal", "Feasible", "ProvenInfeasible", "Timeout", "Unknown", "Cancelled", "InvalidInput", "InvalidModel", "InternalError"];
+export const MAX_DESKTOP_SOLVE_WORKERS = 2;
 
 export interface SolveSettings {
   readonly seed: string;
@@ -94,6 +95,11 @@ export function parseSolveJob(value: unknown): SolveJob {
 }
 
 export function solveRequest(project: ImportedProjectReceipt, settings: SolveSettings): Record<string, unknown> {
+  if (!Number.isSafeInteger(settings.workerCount) || settings.workerCount < 1 || settings.workerCount > MAX_DESKTOP_SOLVE_WORKERS ||
+      !["reproducible", "fast"].includes(settings.execution) || (settings.execution === "reproducible" && settings.workerCount !== 1)) {
+    throw { schemaVersion: 1, code: "DESKTOP_INVALID_SOLVE_LIMITS",
+      message: "线程数必须是 1 或 2；可复现模式必须使用一个线程。", details: null };
+  }
   return { schemaVersion: 1, projectId: project.projectId, expectedRevision: project.revision,
     inputMode: project.sectioningRequired ? "auto_sectioning" : "existing_sections",
     seed: settings.seed, execution: settings.execution, workerCount: settings.workerCount,

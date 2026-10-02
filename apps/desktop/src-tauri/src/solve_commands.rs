@@ -166,7 +166,66 @@ struct ActiveJob {
 #[derive(Clone, Debug, Default)]
 pub struct SolveJobs(Arc<Mutex<BTreeMap<String, ActiveJob>>>, Arc<AtomicBool>);
 
+/// The actual blocking task owns admission until preparation and terminal saving have ended.
+/// Dropping a waiting command future must not release a still-running blocking task's slot.
+#[derive(Debug)]
+struct ReservedSolveJob {
+    jobs: SolveJobs,
+    job_id: String,
+    cancellation: CancellationToken,
+    finished: bool,
+}
+
+impl ReservedSolveJob {
+    fn prepare<T>(
+        self,
+        prepare: impl FnOnce() -> Result<T, CommandError>,
+    ) -> Result<(Self, T), CommandError> {
+        match prepare() {
+            Ok(prepared) => Ok((self, prepared)),
+            Err(error) => {
+                self.complete(Err(error.clone()));
+                Err(error)
+            }
+        }
+    }
+
+    fn complete(mut self, outcome: Result<SavedRunDto, CommandError>) {
+        self.jobs.finish(&self.job_id, outcome);
+        self.finished = true;
+    }
+}
+
+impl Drop for ReservedSolveJob {
+    fn drop(&mut self) {
+        if !self.finished {
+            self.cancellation.cancel();
+            self.jobs.finish(
+                &self.job_id,
+                Err(CommandError::new(
+                    "DESKTOP_SOLVE_TASK_FAILED",
+                    "本次排课任务异常中止，未确认保存；请检查运行历史后重试。",
+                )),
+            );
+        }
+    }
+}
+
 impl SolveJobs {
+    fn reserve(
+        &self,
+        project_id: String,
+        revision: String,
+    ) -> Result<ReservedSolveJob, CommandError> {
+        let (job_id, cancellation) = self.register(project_id, revision)?;
+        Ok(ReservedSolveJob {
+            jobs: self.clone(),
+            job_id,
+            cancellation,
+            finished: false,
+        })
+    }
+
     fn register(
         &self,
         project_id: String,
@@ -188,10 +247,10 @@ impl SolveJobs {
                 "此项目已有排课任务，请等待完成或先取消。",
             ));
         }
-        if jobs.values().filter(|job| job.completed.is_none()).count() >= 2 {
+        if jobs.values().any(|job| job.completed.is_none()) {
             return Err(CommandError::new(
                 "DESKTOP_SOLVE_CONCURRENCY_LIMIT",
-                "最多同时运行两个项目，请等待已有任务结束。",
+                "已有项目正在准备或排课，请等待完成或先取消。一次只运行一个排课任务。",
             ));
         }
         while jobs.len() >= 32 {
@@ -342,13 +401,13 @@ fn decode_request(
         )
     })?;
     if !(1..=3600).contains(&request.time_limit_seconds)
-        || !(1..=16).contains(&request.worker_count)
+        || !(1..=2).contains(&request.worker_count)
         || (matches!(request.execution, ExecutionProfileDto::Reproducible)
             && request.worker_count != 1)
     {
         return Err(CommandError::new(
             "DESKTOP_INVALID_SOLVE_LIMITS",
-            "每次尝试时限为 1–3600 秒，线程数为 1–16；可复现模式必须使用一个线程。",
+            "每次尝试时限为 1–3600 秒，快速模式线程数为 1–2；可复现模式必须使用一个线程。",
         ));
     }
     let mut options = SolveOptions::reproducible(
@@ -421,31 +480,28 @@ pub async fn start_project_solve(
     jobs: tauri::State<'_, SolveJobs>,
     request: StartProjectSolveRequest,
 ) -> Result<SolveJobResponse, CommandError> {
-    decode_request(&request)?;
-    let path = database_path(&app)?;
-    let prepare_path = path.clone();
-    let (prepared, options, client) = tauri::async_runtime::spawn_blocking(move || {
-        prepare_start(&request, &prepare_path, || crate::managed_worker::resolve_managed_worker(&app)
-            .map(|worker| worker.sidecar_spec()).map_err(|error| CommandError::new(error.code(), "本机排课引擎未完整安装或校验失败。请使用包含引擎的 Bell 应用，重新构建或安装后再试。")))
-    }).await.map_err(|_| job_state_error())??;
+    let (command, _) = decode_request(&request)?;
     let jobs = jobs.inner().clone();
-    let (job_id, cancellation) = jobs.register(
-        prepared.receipt().project_id.to_string(),
-        prepared.receipt().revision.to_string(),
+    let reservation = jobs.reserve(
+        command.project_id.to_string(),
+        command.expected_revision.to_string(),
     )?;
-    let started = jobs.query(&job_id, false)?;
-    tauri::async_runtime::spawn(async move {
-        let outcome = tauri::async_runtime::spawn_blocking(move || {
-            execute_and_save(&path, prepared, &options, &client, &cancellation)
-        })
-        .await
-        .unwrap_or_else(|_| {
-            Err(CommandError::new(
-                "DESKTOP_SOLVE_TASK_FAILED",
-                "本次排课任务异常中止，未确认保存；请检查运行历史后重试。",
-            ))
-        });
-        jobs.finish(&job_id, outcome);
+    let (reservation, path) = reservation.prepare(|| database_path(&app))?;
+    let prepare_path = path.clone();
+    let (reservation, (prepared, options, client)) = tauri::async_runtime::spawn_blocking(move || {
+        reservation.prepare(|| prepare_start(&request, &prepare_path, || crate::managed_worker::resolve_managed_worker(&app)
+            .map(|worker| worker.sidecar_spec()).map_err(|error| CommandError::new(error.code(), "本机排课引擎未完整安装或校验失败。请使用包含引擎的 Bell 应用，重新构建或安装后再试。"))))
+    }).await.map_err(|_| job_state_error())??;
+    let started = jobs.query(&reservation.job_id, false)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let outcome = execute_and_save(
+            &path,
+            prepared,
+            &options,
+            &client,
+            &reservation.cancellation,
+        );
+        reservation.complete(outcome);
     });
     Ok(started)
 }
@@ -608,6 +664,35 @@ mod tests {
     }
 
     #[test]
+    fn fast_workers_are_explicitly_bounded_without_changing_accepted_parameters() {
+        for worker_count in [1, 2] {
+            let mut accepted = request();
+            accepted.execution = ExecutionProfileDto::Fast;
+            accepted.worker_count = worker_count;
+            let (_, options) = decode_request(&accepted).unwrap();
+            assert_eq!(options.worker_count, worker_count);
+            assert!(!options.reproducible);
+            assert_eq!(options.profile, SolverProfile::Fast);
+        }
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("must-not-exist.sqlite3");
+        for worker_count in [0, 3, 16, u32::MAX] {
+            let mut rejected = request();
+            rejected.execution = ExecutionProfileDto::Fast;
+            rejected.worker_count = worker_count;
+            assert_eq!(
+                prepare_start(&rejected, &path, || panic!(
+                    "invalid worker count cannot resolve a worker"
+                ))
+                .unwrap_err()
+                .code,
+                "DESKTOP_INVALID_SOLVE_LIMITS"
+            );
+        }
+        assert!(!path.exists());
+    }
+
+    #[test]
     fn saved_revision_conflict_is_detected_before_managed_worker_resolution() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("source.sqlite3");
@@ -675,13 +760,204 @@ mod tests {
             jobs.register("a".into(), "1".into()).unwrap_err().code,
             "DESKTOP_PROJECT_SOLVE_RUNNING"
         );
-        jobs.register("b".into(), "0".into()).unwrap();
         assert_eq!(
-            jobs.register("c".into(), "0".into()).unwrap_err().code,
+            jobs.register("b".into(), "0".into()).unwrap_err().code,
             "DESKTOP_SOLVE_CONCURRENCY_LIMIT"
         );
         jobs.finish(&id, Err(CommandError::new("TEST_FAILURE", "test failure")));
         assert!(jobs.register("a".into(), "1".into()).is_ok());
+    }
+
+    #[test]
+    fn admission_refuses_another_project_before_preparation_runs() {
+        let jobs = SolveJobs::default();
+        let reserved = jobs.reserve("first".into(), "0".into()).unwrap();
+        let rejected = jobs
+            .reserve("second".into(), "0".into())
+            .and_then(|job| job.prepare::<()>(|| panic!("preparation must not start")))
+            .unwrap_err();
+        assert_eq!(rejected.code, "DESKTOP_SOLVE_CONCURRENCY_LIMIT");
+        assert!(jobs.has_running());
+        drop(reserved);
+        assert!(jobs.reserve("second".into(), "0".into()).is_ok());
+    }
+
+    #[test]
+    fn concurrent_admission_has_one_winner_before_any_preparation() {
+        let jobs = SolveJobs::default();
+        let enter = Arc::new(std::sync::Barrier::new(3));
+        let leave = Arc::new(std::sync::Barrier::new(3));
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let handles = (0..2)
+            .map(|index| {
+                let jobs = jobs.clone();
+                let enter = enter.clone();
+                let leave = leave.clone();
+                let sender = sender.clone();
+                std::thread::spawn(move || {
+                    enter.wait();
+                    let reservation = jobs.reserve(format!("project-{index}"), "0".into());
+                    sender
+                        .send(
+                            reservation
+                                .as_ref()
+                                .map(|_| ())
+                                .map_err(|error| error.code.clone()),
+                        )
+                        .unwrap();
+                    leave.wait();
+                    drop(reservation);
+                })
+            })
+            .collect::<Vec<_>>();
+        enter.wait();
+        let outcomes = (0..2)
+            .map(|_| receiver.recv_timeout(Duration::from_secs(2)).unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(outcomes.iter().filter(|value| value.is_ok()).count(), 1);
+        assert_eq!(
+            outcomes
+                .iter()
+                .filter(
+                    |value| matches!(value, Err(code) if code == "DESKTOP_SOLVE_CONCURRENCY_LIMIT")
+                )
+                .count(),
+            1
+        );
+        assert!(jobs.has_running());
+        leave.wait();
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        assert!(!jobs.has_running());
+    }
+
+    #[test]
+    fn preparation_failure_preserves_its_error_and_releases_admission() {
+        let jobs = SolveJobs::default();
+        let reserved = jobs.reserve("first".into(), "0".into()).unwrap();
+        let id = reserved.job_id.clone();
+        let error = reserved
+            .prepare::<()>(|| Err(CommandError::new("PREPARATION_FAILED", "prepare failed")))
+            .unwrap_err();
+        assert_eq!(error.code, "PREPARATION_FAILED");
+        let response = jobs.query(&id, false).unwrap();
+        assert_eq!(response.state, "failed");
+        assert_eq!(response.error.unwrap().code, "PREPARATION_FAILED");
+        assert!(!response.cancellation_requested);
+        assert!(!jobs.has_running());
+        assert!(jobs.reserve("second".into(), "0".into()).is_ok());
+    }
+
+    #[test]
+    fn preparation_panic_join_error_records_unconfirmed_failure_and_releases_admission() {
+        let jobs = SolveJobs::default();
+        let reserved = jobs.reserve("first".into(), "0".into()).unwrap();
+        let id = reserved.job_id.clone();
+        let task = tauri::async_runtime::spawn_blocking(move || {
+            reserved.prepare::<()>(|| panic!("preparation panicked"))
+        });
+        assert!(tauri::async_runtime::block_on(task).is_err());
+        let response = jobs.query(&id, false).unwrap();
+        assert_eq!(response.state, "failed");
+        assert_eq!(response.error.unwrap().code, "DESKTOP_SOLVE_TASK_FAILED");
+        assert!(response.run.is_none());
+        assert!(!jobs.has_running());
+        assert!(jobs.reserve("second".into(), "0".into()).is_ok());
+    }
+
+    #[test]
+    fn abandoning_a_waiting_future_does_not_release_its_blocking_preparation() {
+        let jobs = SolveJobs::default();
+        let reserved = jobs.reserve("first".into(), "0".into()).unwrap();
+        let id = reserved.job_id.clone();
+        let (started_sender, started_receiver) = std::sync::mpsc::channel();
+        let (release_sender, release_receiver) = std::sync::mpsc::channel();
+        let waiting = tauri::async_runtime::spawn(async move {
+            let (reserved, ()) = tauri::async_runtime::spawn_blocking(move || {
+                reserved.prepare(|| {
+                    started_sender.send(()).unwrap();
+                    release_receiver.recv().unwrap();
+                    Ok(())
+                })
+            })
+            .await
+            .unwrap()
+            .unwrap();
+            reserved.complete(Err(CommandError::new(
+                "NOT_ABANDONED",
+                "unexpected completion",
+            )));
+        });
+        started_receiver
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap();
+        waiting.abort();
+        assert!(tauri::async_runtime::block_on(waiting).is_err());
+        assert!(jobs.has_running());
+        assert_eq!(jobs.query(&id, false).unwrap().state, "running");
+        assert_eq!(
+            jobs.reserve("second".into(), "0".into()).unwrap_err().code,
+            "DESKTOP_SOLVE_CONCURRENCY_LIMIT"
+        );
+        release_sender.send(()).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while jobs.has_running() {
+            assert!(
+                Instant::now() < deadline,
+                "abandoned preparation must release its slot after ending"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(
+            jobs.query(&id, false).unwrap().error.unwrap().code,
+            "DESKTOP_SOLVE_TASK_FAILED"
+        );
+        assert!(jobs.reserve("second".into(), "0".into()).is_ok());
+    }
+
+    #[test]
+    fn shutdown_observes_preparation_and_keeps_admission_until_terminal_completion() {
+        let jobs = SolveJobs::default();
+        let reserved = jobs.reserve("first".into(), "0".into()).unwrap();
+        let id = reserved.job_id.clone();
+        let cancellation = reserved.cancellation.clone();
+        let (started_sender, started_receiver) = std::sync::mpsc::channel();
+        let (release_sender, release_receiver) = std::sync::mpsc::channel();
+        let preparing = tauri::async_runtime::spawn_blocking(move || {
+            reserved.prepare(|| {
+                started_sender.send(()).unwrap();
+                release_receiver.recv().unwrap();
+                Ok(())
+            })
+        });
+        started_receiver
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap();
+        assert!(jobs.begin_shutdown());
+        assert!(jobs.has_running());
+        jobs.cancel_all();
+        assert!(cancellation.is_cancelled());
+        let response = jobs.query(&id, false).unwrap();
+        assert_eq!(response.state, "running");
+        assert!(response.cancellation_requested);
+        assert!(response.run.is_none());
+        assert_eq!(
+            jobs.reserve("second".into(), "0".into()).unwrap_err().code,
+            "DESKTOP_SOLVE_SHUTTING_DOWN"
+        );
+        release_sender.send(()).unwrap();
+        let (reserved, ()) = tauri::async_runtime::block_on(preparing).unwrap().unwrap();
+        assert!(jobs.has_running());
+        reserved.complete(Err(CommandError::new(
+            "TERMINAL_SAVE_FAILED",
+            "save failed",
+        )));
+        assert!(!jobs.has_running());
+        assert_eq!(
+            jobs.query(&id, false).unwrap().error.unwrap().code,
+            "TERMINAL_SAVE_FAILED"
+        );
     }
 
     #[test]
@@ -711,11 +987,10 @@ mod tests {
     fn shutdown_blocks_new_jobs_and_cancels_all_live_tokens() {
         let jobs = SolveJobs::default();
         let (_, first) = jobs.register("a".into(), "0".into()).unwrap();
-        let (_, second) = jobs.register("b".into(), "0".into()).unwrap();
         assert!(jobs.begin_shutdown());
         assert!(!jobs.begin_shutdown());
         jobs.cancel_all();
-        assert!(first.is_cancelled() && second.is_cancelled());
+        assert!(first.is_cancelled());
         assert_eq!(
             jobs.register("new".into(), "0".into()).unwrap_err().code,
             "DESKTOP_SOLVE_SHUTTING_DOWN"

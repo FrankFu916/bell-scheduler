@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { commandError, type CommandError, type ImportedProjectReceipt } from "./api";
 import { TimetableWorkspace } from "./TimetableWorkspace";
 import { ScenarioPanel } from "./ScenarioPanel";
-import { cancelSolveJob, listProjectRuns, loadProjectRun, querySolveJob, solveStatusLabel, startSolve,
+import { cancelSolveJob, listProjectRuns, loadProjectRun, MAX_DESKTOP_SOLVE_WORKERS, querySolveJob, solveStatusLabel, startSolve,
   type LoadedRun, type RunPage, type SolveJob, type SolveSettings } from "./solveApi";
 import "./SolvePanel.css";
 
@@ -109,9 +109,9 @@ export function SolvePanel({ project, disabled }: { readonly project: ImportedPr
       <fieldset className="solve-settings" disabled={controlsDisabled}>
         <legend>求解设置</legend>
         <label><span>每次尝试时限（秒）</span><input type="number" min="1" max="3600" value={settings.timeLimitSeconds} onChange={(event) => number("timeLimitSeconds", event.target.value)} /></label>
-        <label><span>运行模式</span><select value={settings.execution} onChange={(event) => setSettings((current) => ({ ...current, execution: event.target.value as "fast" | "reproducible", workerCount: 1 }))}><option value="reproducible">可复现 · 单线程</option><option value="fast">快速 · 允许多线程</option></select></label>
+        <label><span>运行模式</span><select value={settings.execution} onChange={(event) => setSettings((current) => ({ ...current, execution: event.target.value as "fast" | "reproducible", workerCount: 1 }))}><option value="reproducible">可复现 · 单线程</option><option value="fast">快速 · 最多两个线程</option></select></label>
         <label><span>随机种子</span><input inputMode="numeric" value={settings.seed} onChange={(event) => setSettings((current) => ({ ...current, seed: event.target.value }))} /></label>
-        {settings.execution === "fast" && <label><span>线程数</span><input type="number" min="1" max="16" value={settings.workerCount} onChange={(event) => number("workerCount", event.target.value)} /></label>}
+        {settings.execution === "fast" && <label><span>线程数</span><input type="number" min="1" max={MAX_DESKTOP_SOLVE_WORKERS} step="1" value={settings.workerCount} onChange={(event) => number("workerCount", event.target.value)} /></label>}
         {project.sectioningRequired && <>
           <label><span>最小班额</span><input type="number" min="1" max="65535" value={settings.minimumSize} onChange={(event) => number("minimumSize", event.target.value)} /></label>
           <label><span>目标班额</span><input type="number" min="1" max="65535" value={settings.targetSize} onChange={(event) => number("targetSize", event.target.value)} /></label>
@@ -119,6 +119,7 @@ export function SolvePanel({ project, disabled }: { readonly project: ImportedPr
           <label><span>成班候选数量</span><input type="number" min="1" max="16" value={settings.candidateCount} onChange={(event) => number("candidateCount", event.target.value)} /></label>
         </>}
       </fieldset>
+      <p className="solve-note">默认单线程，同时只运行一个排课任务。快速模式最多使用两个线程。</p>
       {settings.execution === "fast" && <p className="solve-note">多线程模式保留实际参数与种子，但不保证每次运行得到完全相同的课表。</p>}
       <div className="solve-actions"><button className="primary-button" type="button" disabled={controlsDisabled} onClick={() => { void start(); }}>{starting ? "正在验证项目和引擎…" : "生成课表"}</button>
         {running && <button type="button" disabled={job.cancellationRequested} onClick={() => { void cancel(); }}>{job.cancellationRequested ? "正在取消…" : "取消本次排课"}</button>}

@@ -19,6 +19,28 @@ test("saved project request preserves exact revision and seed without an executa
   assert.deepEqual(auto.autoSectioning, { minimumSize: 10, targetSize: 12, maximumSize: 16, candidateCount: 3 });
 });
 
+test("desktop profiles preserve the exact seed and request with one or two allowed workers", () => {
+  for (const [execution, workerCount] of [["reproducible", 1], ["fast", 1], ["fast", 2]]) {
+    assert.deepEqual(solveRequest(project, { ...settings, execution, workerCount }), {
+      schemaVersion: 1, projectId: project.projectId, expectedRevision: project.revision,
+      inputMode: "existing_sections", seed: settings.seed, execution, workerCount,
+      timeLimitSeconds: settings.timeLimitSeconds, autoSectioning: null,
+    });
+  }
+});
+
+test("invalid worker counts and reproducible multiworker settings are rejected before desktop IPC", async () => {
+  for (const invalid of [
+    ...[0, -1, 3, 16, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1, "2"].map((workerCount) =>
+      ({ ...settings, execution: "fast", workerCount })),
+    { ...settings, workerCount: 2 }, { ...settings, execution: "other" },
+  ]) {
+    assert.throws(() => solveRequest(project, invalid), { code: "DESKTOP_INVALID_SOLVE_LIMITS" });
+    await assert.rejects(startSolve(project, invalid), { code: "DESKTOP_INVALID_SOLVE_LIMITS" },
+      "the request must fail before the ordinary-browser desktop runtime check");
+  }
+});
+
 test("job decoding rejects empty and contradictory success/error responses", () => {
   assert.deepEqual(parseSolveJob(running), running);
   for (const invalid of [{}, null, { ...running, state: "completed" }, { ...running, state: "failed" },
