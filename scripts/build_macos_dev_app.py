@@ -21,17 +21,22 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", action="store_true", help="use release Rust profile; still ad-hoc development native artifacts")
     parser.add_argument("--skip-isolation", action="store_true", help="build only; does not claim the isolated native gate")
+    parser.add_argument("--jobs", type=int, default=1, help="maximum concurrent build and test jobs (1 or 2; default: 1)")
     args = parser.parse_args()
+    if args.jobs not in (1, 2):
+        parser.error("--jobs must be 1 or 2")
     if sys.platform != "darwin":
         parser.error("this build supports macOS arm64 only")
+    if os.getpriority(os.PRIO_PROCESS, 0) < 10:
+        os.setpriority(os.PRIO_PROCESS, 0, 10)
     lock = json.loads(worker_stage.LOCK.read_text())
     archive = ROOT / ".cache/ortools" / lock["distribution"]["file_name"]
     if worker_stage.digest(archive) != lock["distribution"]["sha256"]:
         raise ValueError("pinned archive checksum mismatch before native build")
     checked("cmake", "-S", ROOT / "solver/ortools-worker", "-B", ROOT / "solver/ortools-worker/build",
             "-DORTOOLS_WORKER_BUILD_TESTS=ON", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_OSX_ARCHITECTURES=arm64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=26.0")
-    checked("cmake", "--build", ROOT / "solver/ortools-worker/build", "--parallel")
-    checked("ctest", "--test-dir", ROOT / "solver/ortools-worker/build", "--output-on-failure")
+    checked("cmake", "--build", ROOT / "solver/ortools-worker/build", "--parallel", args.jobs)
+    checked("ctest", "--test-dir", ROOT / "solver/ortools-worker/build", "--parallel", args.jobs, "--output-on-failure")
     worker_stage.stage()
     tauri = ROOT / "frontend/node_modules/.bin/tauri"
     if not tauri.exists():
@@ -40,7 +45,8 @@ def main():
     environment = dict(os.environ)
     environment.update(PATH=f"{cargo.parent}{os.pathsep}{environment.get('PATH', '')}",
                        RUSTUP_TOOLCHAIN="1.88.0", CARGO_TARGET_DIR=str(ROOT / "target/rust-1.88.0"),
-                       MACOSX_DEPLOYMENT_TARGET="26.0")
+                       MACOSX_DEPLOYMENT_TARGET="26.0", CARGO_BUILD_JOBS=str(args.jobs),
+                       RUST_TEST_THREADS=str(args.jobs))
     command = [tauri, "build", "--bundles", "app", "--no-sign", "--features", "managed-worker",
                "--config", worker_stage.STAGE / "tauri-overlay.json"]
     if not args.release:

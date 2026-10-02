@@ -83,6 +83,8 @@ make frontend-install frontend-check
 
 `rust-gate` 包括格式检查、Clippy 和 workspace 测试；Clippy 将警告视为错误。`frontend-check` 运行前端测试、TypeScript strict 类型检查和 Vite 构建。
 
+构建默认使用一个并行任务，并以较低的 CPU 调度优先级运行，方便同时使用电脑。Rust 编译与测试、C++ 编译与 CTest 都会遵守该限制。电脑空闲时可用 `make BUILD_JOBS=2 desktop-bundle`，桌面构建最多允许两个任务；不要同时启动多份完整构建或求解。降低 CPU 优先级不限制内存占用，内存紧张时应暂停重型构建。
+
 浏览器开发服务器：
 
 ```sh
