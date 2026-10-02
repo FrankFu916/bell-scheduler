@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use chrono::{DateTime, SubsecRound, Utc};
 use class_schedule_domain::{
-    MeetingAssignment, MeetingDuration, Name, ScenarioId, ScheduledMeeting, ScheduledMeetingId,
-    SchoolProjectId, SolverRunId, Timetable, TimetableId,
+    Lock, MeetingAssignment, MeetingDuration, Name, ScenarioId, ScheduledMeeting,
+    ScheduledMeetingId, SchoolProjectId, SolverRunId, Timetable, TimetableId,
 };
 use class_schedule_persistence::StoredScenario;
 use class_schedule_scheduling::{
@@ -15,8 +15,9 @@ use serde::{Deserialize, Serialize};
 use solver_client::SolverRunStatus;
 
 use super::{
-    SCENARIO_DOCUMENT_SCHEMA_VERSION, ScenarioApplicationError, ScenarioCloneLineage,
-    TIMETABLE_DOCUMENT_SCHEMA_VERSION, invalid, parse_hash,
+    SCENARIO_DOCUMENT_SCHEMA_VERSION, SCENARIO_EDIT_DOCUMENT_SCHEMA_VERSION,
+    ScenarioApplicationError, ScenarioCloneLineage, TIMETABLE_DOCUMENT_SCHEMA_VERSION, invalid,
+    parse_hash,
 };
 use crate::compile::stable_id;
 use crate::{
@@ -24,7 +25,7 @@ use crate::{
     LoadedSolveArtifact, MaterializedSectioning, SOLVE_ARTIFACT_SEMANTICS_VERSION, SolveExecution,
 };
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct ScenarioPayload {
     pub schema_version: u32,
@@ -41,9 +42,15 @@ pub(super) struct ScenarioPayload {
     pub materialized_sectioning: Option<MaterializedSectioning>,
     pub lineage: Option<ScenarioCloneLineage>,
     pub created_at: DateTime<Utc>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_present"
+    )]
+    pub edit: Option<super::version_two::EditMetadata>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct TimetablePayload {
     pub schema_version: u32,
@@ -55,12 +62,18 @@ pub(super) struct TimetablePayload {
     pub assignment_hash: [u8; 32],
     pub meetings: Vec<ScheduledMeeting>,
     pub quality: ObjectiveVector,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_present"
+    )]
+    pub user_locks: Option<Vec<Lock>>,
 }
 
-struct Selected<'a> {
-    compiled: &'a CompiledSchoolProblem,
-    completed: &'a CompletedSolve,
-    quality: &'a ObjectiveVector,
+pub(super) struct Selected<'a> {
+    pub compiled: &'a CompiledSchoolProblem,
+    pub completed: &'a CompletedSolve,
+    pub quality: &'a ObjectiveVector,
     materialized: Option<MaterializedSectioning>,
     index: Option<usize>,
 }
@@ -155,6 +168,7 @@ pub(super) fn build_documents(
         materialized_sectioning: selected.materialized,
         lineage,
         created_at: Utc::now().trunc_subsecs(3),
+        edit: None,
     };
     let timetable = TimetablePayload {
         schema_version: TIMETABLE_DOCUMENT_SCHEMA_VERSION,
@@ -166,6 +180,7 @@ pub(super) fn build_documents(
         assignment_hash: hash_meetings(&meetings)?,
         meetings,
         quality: selected.quality.clone(),
+        user_locks: None,
     };
     // Validate the stable-ID representation too; serialization never bypasses the Hard gate.
     replay_timetable(loaded, &scenario, &timetable)?;
@@ -178,10 +193,12 @@ pub(super) fn decode_documents(
     let doc = &stored.document;
     let scenario: ScenarioPayload = serde_json::from_slice(&doc.scenario_payload)?;
     let timetable: TimetablePayload = serde_json::from_slice(&doc.timetable_payload)?;
-    if scenario.schema_version != SCENARIO_DOCUMENT_SCHEMA_VERSION
-        || doc.scenario_schema_version != SCENARIO_DOCUMENT_SCHEMA_VERSION
-        || timetable.schema_version != TIMETABLE_DOCUMENT_SCHEMA_VERSION
-        || doc.timetable_schema_version != TIMETABLE_DOCUMENT_SCHEMA_VERSION
+    if !matches!(
+        scenario.schema_version,
+        SCENARIO_DOCUMENT_SCHEMA_VERSION | SCENARIO_EDIT_DOCUMENT_SCHEMA_VERSION
+    ) || doc.scenario_schema_version != scenario.schema_version
+        || timetable.schema_version != scenario.schema_version
+        || doc.timetable_schema_version != timetable.schema_version
         || scenario.semantics_version != SOLVE_ARTIFACT_SEMANTICS_VERSION
     {
         return Err(invalid("APPLICATION_SCENARIO_UNSUPPORTED_SCHEMA"));
@@ -203,11 +220,7 @@ pub(super) fn decode_documents(
     {
         return Err(invalid("APPLICATION_SCENARIO_METADATA_MISMATCH"));
     }
-    if scenario.scenario_revision != 0
-        || timetable.timetable_revision != 0
-        || scenario.scenario_id.as_uuid().is_nil()
-        || timetable.timetable_id.as_uuid().is_nil()
-    {
+    if scenario.scenario_id.as_uuid().is_nil() || timetable.timetable_id.as_uuid().is_nil() {
         return Err(invalid("APPLICATION_SCENARIO_UNSUPPORTED_REVISION"));
     }
     if scenario.lineage.as_ref().is_some_and(|lineage| {
@@ -215,15 +228,25 @@ pub(super) fn decode_documents(
             || lineage.timetable_id == timetable.timetable_id
             || lineage.scenario_id.as_uuid().is_nil()
             || lineage.timetable_id.as_uuid().is_nil()
-            || lineage.scenario_revision != 0
-            || lineage.timetable_revision != 0
+            || (scenario.schema_version == SCENARIO_DOCUMENT_SCHEMA_VERSION
+                && (lineage.scenario_revision != 0 || lineage.timetable_revision != 0))
     }) {
         return Err(invalid("APPLICATION_SCENARIO_INVALID_LINEAGE"));
+    }
+    if scenario.schema_version == SCENARIO_DOCUMENT_SCHEMA_VERSION {
+        if scenario.scenario_revision != 0 || timetable.timetable_revision != 0 {
+            return Err(invalid("APPLICATION_SCENARIO_UNSUPPORTED_REVISION"));
+        }
+        if scenario.edit.is_some() || timetable.user_locks.is_some() {
+            return Err(invalid("APPLICATION_SCENARIO_UNSUPPORTED_SCHEMA"));
+        }
+    } else {
+        super::version_two::validate_shape(stored, &scenario, &timetable)?;
     }
     Ok((scenario, timetable))
 }
 
-type ReplayedTimetable = (
+pub(super) type ReplayedTimetable = (
     CompiledSchoolProblem,
     Vec<Assignment>,
     Timetable,
@@ -248,6 +271,9 @@ pub(super) fn replay_timetable(
     }
     if timetable.snapshot_hash != selected.completed.snapshot_hash {
         return Err(invalid("APPLICATION_SCENARIO_SNAPSHOT_MISMATCH"));
+    }
+    if scenario.schema_version == SCENARIO_EDIT_DOCUMENT_SCHEMA_VERSION {
+        return super::version_two::replay_state(&selected, scenario, timetable);
     }
     let problem = &selected.compiled.problem;
     let assignments = from_meetings(problem, &timetable.meetings, timetable.timetable_id)?;
@@ -283,7 +309,7 @@ pub(super) fn replay_timetable(
     ))
 }
 
-fn to_meetings(
+pub(super) fn to_meetings(
     problem: &SchedulingProblemSnapshot,
     assignments: &[Assignment],
     timetable_id: TimetableId,
@@ -308,7 +334,7 @@ fn to_meetings(
         .collect()
 }
 
-fn from_meetings(
+pub(super) fn from_meetings(
     problem: &SchedulingProblemSnapshot,
     meetings: &[ScheduledMeeting],
     timetable_id: TimetableId,
@@ -375,7 +401,9 @@ fn meeting_id(
     )
 }
 
-fn hash_meetings(meetings: &[ScheduledMeeting]) -> Result<[u8; 32], ScenarioApplicationError> {
+pub(super) fn hash_meetings(
+    meetings: &[ScheduledMeeting],
+) -> Result<[u8; 32], ScenarioApplicationError> {
     let mut stable = meetings
         .iter()
         .map(|meeting| (meeting.demand_id(), meeting.assignment()))
@@ -384,9 +412,18 @@ fn hash_meetings(meetings: &[ScheduledMeeting]) -> Result<[u8; 32], ScenarioAppl
     Ok(*blake3::hash(&serde_json::to_vec(&stable)?).as_bytes())
 }
 
-fn validate_name(name: &str) -> Result<(), ScenarioApplicationError> {
+pub(super) fn validate_name(name: &str) -> Result<(), ScenarioApplicationError> {
     if Name::new(name).is_err() || name.trim() != name || name.chars().count() > 200 {
         return Err(invalid("APPLICATION_SCENARIO_INVALID_NAME"));
     }
     Ok(())
+}
+
+// Absent fields keep the exact v1 representation. An explicitly present null is not a v1 field.
+fn deserialize_present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
 }

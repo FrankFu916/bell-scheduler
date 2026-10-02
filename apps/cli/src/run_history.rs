@@ -37,14 +37,25 @@ pub(super) struct ExportRunArgs {
 }
 
 pub(super) fn open_database(path: &Path) -> Result<SqliteStore, CliFailure> {
-    open_existing_database(path, false)
+    open_existing_database(path, DatabaseAccess::Migrate)
 }
 
 pub(super) fn open_readonly_database(path: &Path) -> Result<SqliteStore, CliFailure> {
-    open_existing_database(path, true)
+    open_existing_database(path, DatabaseAccess::ReadOnly)
 }
 
-fn open_existing_database(path: &Path, readonly: bool) -> Result<SqliteStore, CliFailure> {
+pub(super) fn open_current_database(path: &Path) -> Result<SqliteStore, CliFailure> {
+    open_existing_database(path, DatabaseAccess::CurrentSchema)
+}
+
+#[derive(Clone, Copy, Debug)]
+enum DatabaseAccess {
+    Migrate,
+    ReadOnly,
+    CurrentSchema,
+}
+
+fn open_existing_database(path: &Path, access: DatabaseAccess) -> Result<SqliteStore, CliFailure> {
     let metadata = fs::symlink_metadata(path).map_err(|_| {
         CliFailure::new(
             "CLI_DATABASE_NOT_ACCESSIBLE",
@@ -57,10 +68,10 @@ fn open_existing_database(path: &Path, readonly: bool) -> Result<SqliteStore, Cl
             "project database must be a regular file",
         ));
     }
-    let result = if readonly {
-        SqliteStore::open_readonly(path)
-    } else {
-        SqliteStore::open(path)
+    let result = match access {
+        DatabaseAccess::ReadOnly => SqliteStore::open_readonly(path),
+        DatabaseAccess::Migrate => SqliteStore::open(path),
+        DatabaseAccess::CurrentSchema => SqliteStore::open_existing(path),
     };
     result
         .map_err(|error| CliFailure::new(error.code(), "cannot open the existing project database"))

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { commandError } from "./api";
 import {
   TIMETABLE_VIEWS, loadSavedTimetable, loadTimetableEntities,
@@ -9,6 +9,9 @@ import { loadScenarioTimetable, loadScenarioTimetableEntities, scenarioTimetable
 import type { ScenarioReceipt } from "./scenarioApi";
 import { ScenarioTimetableExport } from "./ScenarioTimetableExport";
 import { scenarioExportContextKey } from "./scenarioTimetableExportApi";
+import { ScenarioEditPanel } from "./ScenarioEditPanel";
+import type { ScenarioEditCommitResult } from "./scenarioEditApi";
+import { sameEditRevision, selectScenarioActivity, type ScenarioEditSelection } from "./scenarioEditState";
 import "./TimetableWorkspace.css";
 
 const ENTITY_PAGE_SIZE = 20;
@@ -25,6 +28,11 @@ type TimetableSource = { readonly kind: "run"; readonly runId: string } |
   { readonly kind: "scenario"; readonly receipt: ScenarioReceipt; readonly displayName: string; readonly sourceIsCurrent: boolean };
 type EntityResult = TimetableEntityPage | ScenarioTimetableEntityPage;
 type PageResult = SavedTimetablePage | ScenarioTimetablePage;
+interface ScenarioEditing {
+  readonly disabled: boolean; readonly blocked: boolean;
+  readonly onCommitted: (result: ScenarioEditCommitResult) => Promise<void>;
+  readonly onBusyChange: (busy: boolean) => void;
+}
 
 function matchesSource(source: TimetableSource, result: EntityResult | PageResult): boolean {
   return source.kind === "run" ? "runId" in result && result.runId === source.runId
@@ -36,15 +44,19 @@ export function TimetableWorkspace({ runId }: { readonly runId: string }) {
   return <ReadOnlyTimetableWorkspace key={`run:${runId}`} source={source} />;
 }
 
-export function ScenarioTimetableWorkspace({ receipt, displayName, sourceIsCurrent }: {
+export function ScenarioTimetableWorkspace({ receipt, displayName, sourceIsCurrent, disabled, blocked, onEditCommitted, onEditBusyChange }: {
   readonly receipt: ScenarioReceipt; readonly displayName: string; readonly sourceIsCurrent: boolean;
+  readonly disabled: boolean; readonly blocked: boolean;
+  readonly onEditCommitted: (result: ScenarioEditCommitResult) => Promise<void>;
+  readonly onEditBusyChange: (busy: boolean) => void;
 }) {
   const source = useMemo<TimetableSource>(() => ({ kind: "scenario", receipt, displayName, sourceIsCurrent }),
     [receipt, displayName, sourceIsCurrent]);
-  return <ReadOnlyTimetableWorkspace key={`scenario:${scenarioTimetableKey(receipt)}`} source={source} />;
+  return <ReadOnlyTimetableWorkspace key={`scenario:${receipt.scenarioId}`} source={source}
+    editing={{ disabled, blocked, onCommitted: onEditCommitted, onBusyChange: onEditBusyChange }} />;
 }
 
-function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSource }) {
+function ReadOnlyTimetableWorkspace({ source, editing }: { readonly source: TimetableSource; readonly editing?: ScenarioEditing }) {
   const labelId = useId();
   const [view, setView] = useState<TimetableView>("administrative_class");
   const [entityOffset, setEntityOffset] = useState(0);
@@ -55,19 +67,31 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
   const [loadingEntities, setLoadingEntities] = useState(false);
   const [loadingRows, setLoadingRows] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [editingBusy, setEditingBusy] = useState(false);
+  const [editSelection, setEditSelection] = useState<ScenarioEditSelection | null>(null);
+  const [editPartner, setEditPartner] = useState<ScenarioEditSelection | null>(null);
   const [failure, setFailure] = useState<ReturnType<typeof commandError> | null>(null);
   const [inspectedId, setInspectedId] = useState<string | null>(null);
   const inspectedHeading = useRef<HTMLHeadingElement>(null);
   const inspectedTrigger = useRef<HTMLButtonElement | null>(null);
+  const priorEntityPage = useRef({ view, entityOffset });
+  const sourceKey = source.kind === "scenario" ? scenarioTimetableKey(source.receipt) : source.runId;
+  const controlsLocked = exporting || editingBusy || editing?.disabled === true || editing?.blocked === true;
+  const notifyEditBusy = useCallback((busy: boolean) => { setEditingBusy(busy); editing?.onBusyChange(busy); }, [editing?.onBusyChange]);
+
+  useEffect(() => { setEditSelection(null); setEditPartner(null); setInspectedId(null); }, [sourceKey]);
 
   useEffect(() => {
     let stale = false;
-    setLoadingEntities(true); setEntities(null); setEntityId(""); setPage(null);
-    setRowOffset(0); setInspectedId(null); setFailure(null);
+    const changedPage = priorEntityPage.current.view !== view || priorEntityPage.current.entityOffset !== entityOffset;
+    priorEntityPage.current = { view, entityOffset };
+    setLoadingEntities(true); setEntities(null); setPage(null);
+    if (changedPage) { setEntityId(""); setRowOffset(0); }
+    setInspectedId(null); setFailure(null);
     const query = source.kind === "run" ? loadTimetableEntities(source.runId, view, entityOffset, ENTITY_PAGE_SIZE)
       : loadScenarioTimetableEntities(source.receipt, view, entityOffset, ENTITY_PAGE_SIZE);
     void query.then((result) => {
-      if (!stale) setEntities(result);
+      if (!stale) { setEntities(result); setEntityId((current) => result.entities.some((entity) => entity.id === current) ? current : ""); }
     }).catch((error: unknown) => {
       if (!stale) setFailure(commandError(error));
     }).finally(() => { if (!stale) setLoadingEntities(false); });
@@ -92,7 +116,8 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
   useEffect(() => { if (inspectedId) inspectedHeading.current?.focus(); }, [inspectedId]);
 
   const currentEntities = entities && matchesSource(source, entities) && entities.view === view && entities.offset === entityOffset ? entities : null;
-  const currentPage = page && matchesSource(source, page.data) && page.view === view && page.data.selection.id === entityId && page.data.offset === rowOffset ? page.data : null;
+  const currentPage = !editing?.blocked && page && matchesSource(source, page.data) && page.view === view && page.data.selection.id === entityId && page.data.offset === rowOffset ? page.data : null;
+  const currentEditSelection = editSelection !== null && scenarioTimetableKey(editSelection.receipt) === sourceKey ? editSelection : null;
   const scenarioMetadata = currentPage && "receipt" in currentPage ? currentPage
     : currentEntities && "receipt" in currentEntities ? currentEntities : null;
   const historicalSource = source.kind === "scenario" && !(scenarioMetadata?.sourceIsCurrent ?? source.sourceIsCurrent);
@@ -105,6 +130,7 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
   }])).values()];
   const cells = new Map(calendar.map((cell) => [`${cell.day}:${cell.periodIndex}`, cell]));
   const inspected = inspectedId ? rowsById.get(inspectedId) : undefined;
+  const currentLocks = new Map(currentPage && "activityLocks" in currentPage ? currentPage.activityLocks.map((lock) => [lock.activityId, lock]) : []);
   const viewLabel = TIMETABLE_VIEWS.find((item) => item.value === view)?.label ?? "课表";
   const exportContext = currentPage && "receipt" in currentPage ? {
     receipt: currentPage.receipt, view, selection: currentPage.selection, totalRows: currentPage.totalRows,
@@ -120,19 +146,27 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
     inspectedTrigger.current?.focus();
   }
 
+  function selectForEdit(row: TimetableRow, partner: boolean) {
+    if (controlsLocked || !currentPage || !("receipt" in currentPage)) return;
+    const selection = selectScenarioActivity(currentPage, row.activityId);
+    if (partner && currentEditSelection !== null && sameEditRevision(currentEditSelection, selection)) setEditPartner(selection);
+    else { setEditSelection(selection); setEditPartner(null); }
+  }
+
   return <section className="timetable-workspace" aria-labelledby={`${labelId}-title`}>
     <header className="timetable-heading">
       <div><span className="timetable-eyebrow">{source.kind === "scenario" ? "已采用方案 · 课表" : "已保存运行"}</span><h2 id={`${labelId}-title`}>{title}</h2>
         {source.kind === "scenario" && <p className="timetable-version">方案版本 {source.receipt.scenarioRevision} · 课表版本 {source.receipt.timetableRevision}</p>}</div>
-      <span className="timetable-readonly">只读查看</span>
+      <span className="timetable-readonly">{editing ? "可预览调课" : "只读查看"}</span>
     </header>
     <p className="timetable-intro">{source.kind === "scenario"
-      ? "查看此方案保存的课表。每次查询均按方案的历史输入、成班和课表重新校验；当前为只读视图。"
+      ? "查看此方案保存的课表。打开课次详情可选择调课、交换或锁定，预览通过后再确认保存。"
       : "查看原始版本的排课结果。打开时会重新校验；原运行与采用后的独立方案分别保存。"}</p>
     {historicalSource && <p className="timetable-history-warning" role="status">源项目已有更新。这里显示此方案保存的历史数据和课表，不会自动重排或改写方案。</p>}
+    {editing?.blocked && <p className="timetable-history-warning" role="status">调课已保存，版本信息会保留。正在等待重新打开方案核对，旧课表的编辑与导出已暂停。</p>}
     <div className="timetable-controls">
       <label htmlFor={`${labelId}-view`}>查看方式
-        <select id={`${labelId}-view`} value={view} disabled={exporting} onChange={(event) => {
+        <select id={`${labelId}-view`} value={view} disabled={controlsLocked} onChange={(event) => {
           const selected = TIMETABLE_VIEWS.find((item) => item.value === event.target.value);
           if (selected) { setView(selected.value); setEntityOffset(0); setEntityId(""); setRowOffset(0); }
         }}>
@@ -140,16 +174,16 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
         </select>
       </label>
       <label htmlFor={`${labelId}-entity`}>选择{viewLabel}
-        <select id={`${labelId}-entity`} disabled={exporting || loadingEntities || !currentEntities?.entities.length} value={entityId}
+        <select id={`${labelId}-entity`} disabled={controlsLocked || loadingEntities || !currentEntities?.entities.length} value={entityId}
           onChange={(event) => { setEntityId(event.target.value); setRowOffset(0); }}>
           <option value="">请选择{viewLabel}</option>
           {currentEntities?.entities.map((entity) => <option key={entity.id} value={entity.id}>{entity.label} · {entity.code}</option>)}
         </select>
       </label>
       <div className="timetable-pagination" aria-label={`${viewLabel}对象分页`}>
-        <button type="button" disabled={exporting || loadingEntities || entityOffset === 0} onClick={() => setEntityOffset(Math.max(0, entityOffset - ENTITY_PAGE_SIZE))}>上一页对象</button>
+        <button type="button" disabled={controlsLocked || loadingEntities || entityOffset === 0} onClick={() => setEntityOffset(Math.max(0, entityOffset - ENTITY_PAGE_SIZE))}>上一页对象</button>
         <span>{currentEntities ? `${currentEntities.totalEntities} 个对象` : "读取对象…"}</span>
-        <button type="button" disabled={exporting || loadingEntities || !currentEntities?.hasMore} onClick={() => {
+        <button type="button" disabled={controlsLocked || loadingEntities || !currentEntities?.hasMore} onClick={() => {
           if (currentEntities?.nextOffset !== null && currentEntities?.nextOffset !== undefined) setEntityOffset(currentEntities.nextOffset);
         }}>下一页对象</button>
       </div>
@@ -160,10 +194,14 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
         !failure ? `选择一个${viewLabel}打开课表。` : null}
     </div>
     {failure && <div className="timetable-error" role="alert"><strong>无法读取课表</strong><p>{failure.message}</p><code>{failure.code}</code></div>}
+    {editing && currentEditSelection !== null && <ScenarioEditPanel key={`${sourceKey}:${currentEditSelection.row.activityId}`}
+      selection={currentEditSelection} partner={editPartner} disabled={exporting || editing.disabled || editing.blocked}
+      onClear={() => { setEditSelection(null); setEditPartner(null); }} onClearPartner={() => setEditPartner(null)}
+      onBusyChange={notifyEditBusy} onCommitted={editing.onCommitted} />}
     {currentPage && <>
       <div className="timetable-result-meta"><strong>{currentPage.selection.label}</strong><span>来源版本 {"receipt" in currentPage ? currentPage.receipt.sourceProjectRevision : currentPage.projectRevision}</span>
         <span>独立校验通过</span>{"selectedAttemptIndex" in currentPage && currentPage.selectedAttemptIndex !== null && <span>本次成班候选 {currentPage.selectedAttemptIndex + 1}</span>}</div>
-      {exportContext !== null && <ScenarioTimetableExport key={scenarioExportContextKey(exportContext)}
+      {exportContext !== null && !editingBusy && !editing?.disabled && <ScenarioTimetableExport key={scenarioExportContextKey(exportContext)}
         context={exportContext} onBusyChange={setExporting} />}
       <div className="timetable-grid-scroll" tabIndex={0} role="region" aria-label={`${currentPage.selection.label}周课表，可横向滚动`}>
         <table className="timetable-grid">
@@ -181,6 +219,8 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
                     onClick={(event) => inspect(row, event.currentTarget)}>
                     <strong>{row.coursePlan.label}{cell.timeslotIndex !== row.startTimeslotIndex ? " · 续" : ""}</strong>
                     <span>{row.audience.entity.label}</span><span>{row.teacher.label} · {row.room.label}</span>
+                    {currentLocks.get(id)?.sourceLocked && <span className="scenario-lock-state">来源固定</span>}
+                    {currentLocks.get(id)?.userLocked && <span className="scenario-lock-state">用户锁定</span>}
                   </button> : null;
                 })}
                 {cell && cell.occupiedCount > cell.pageActivityIds.length && <span className="timetable-other-page">另有 {cell.occupiedCount - cell.pageActivityIds.length} 课次在其他页</span>}
@@ -192,9 +232,9 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
       </div>
       <p className="timetable-grid-note">周格保留全部课节。年级等综合视图可能有并行课次；“其他页”表示课次尚未加载到当前页。</p>
       <div className="timetable-pagination timetable-row-pagination" aria-label="课次分页">
-        <button type="button" disabled={exporting || loadingRows || rowOffset === 0} onClick={() => setRowOffset(Math.max(0, rowOffset - ROW_PAGE_SIZE))}>上一页课次</button>
+        <button type="button" disabled={controlsLocked || loadingRows || rowOffset === 0} onClick={() => setRowOffset(Math.max(0, rowOffset - ROW_PAGE_SIZE))}>上一页课次</button>
         <span>{currentPage.totalRows === 0 ? "没有匹配课次" : `${rowOffset + 1}–${rowOffset + currentPage.rows.length} / ${currentPage.totalRows} 课次`}</span>
-        <button type="button" disabled={exporting || loadingRows || !currentPage.hasMore} onClick={() => { if (currentPage.nextOffset !== null) setRowOffset(currentPage.nextOffset); }}>下一页课次</button>
+        <button type="button" disabled={controlsLocked || loadingRows || !currentPage.hasMore} onClick={() => { if (currentPage.nextOffset !== null) setRowOffset(currentPage.nextOffset); }}>下一页课次</button>
       </div>
       <div className="timetable-details-layout">
         <div className="timetable-list-scroll" tabIndex={0} role="region" aria-label="当前页课次列表">
@@ -216,6 +256,11 @@ function ReadOnlyTimetableWorkspace({ source }: { readonly source: TimetableSour
             <dt>课程计划 / 学科</dt><dd>{inspected.coursePlan.code} / {inspected.subject.label}</dd>
             <dt>年级</dt><dd>{inspected.grade.label}</dd><dt>课次</dt><dd>第{inspected.meetingOrdinal}次</dd>
             <dt>活动 ID</dt><dd><code>{inspected.activityId}</code></dd></dl>
+          {editing && <div className="scenario-edit-inspector-actions">
+            <span className="scenario-edit-note">{currentLocks.get(inspected.activityId)?.sourceLocked ? "来源固定安排" : currentLocks.get(inspected.activityId)?.userLocked ? "用户已锁定此安排" : "当前未锁定"}</span>
+            <button type="button" disabled={controlsLocked} onClick={() => selectForEdit(inspected, false)}>选择此课调课 / 锁定</button>
+            {currentEditSelection !== null && currentEditSelection.row.activityId !== inspected.activityId && <button type="button" disabled={controlsLocked} onClick={() => selectForEdit(inspected, true)}>与待调课程交换</button>}
+          </div>}
         </aside>}
       </div>
       <details className="timetable-quality"><summary>查看整份课表的质量评分与来源</summary>

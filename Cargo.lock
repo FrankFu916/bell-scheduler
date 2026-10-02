@@ -523,6 +523,7 @@ dependencies = [
  "class-schedule-domain",
  "class-schedule-import",
  "class-schedule-persistence",
+ "class-schedule-scoring",
  "class-schedule-validation",
  "csv",
  "rusqlite",

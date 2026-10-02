@@ -8,6 +8,7 @@ use class_schedule_application::{
     TimetableRow, TimetableView,
 };
 use class_schedule_domain::Day;
+use class_schedule_scoring::ObjectiveVector;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -193,6 +194,7 @@ impl From<TimetableRow> for TimetableRowDto {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimetableGridCellDto {
+    pub timeslot_id: String,
     pub timeslot_index: u32,
     pub day: &'static str,
     pub day_label: String,
@@ -206,6 +208,7 @@ pub struct TimetableGridCellDto {
 impl From<TimetableGridCell> for TimetableGridCellDto {
     fn from(cell: TimetableGridCell) -> Self {
         Self {
+            timeslot_id: cell.timeslot_id.to_string(),
             timeslot_index: cell.timeslot_index,
             day: day_code(cell.day),
             day_label: cell.day_label,
@@ -238,6 +241,28 @@ pub struct TimetableQualityTierDto {
     pub priority: u32,
     pub value: String,
     pub metrics: Vec<TimetableMetricDto>,
+}
+
+pub(super) fn quality_dto(quality: &ObjectiveVector) -> Vec<TimetableQualityTierDto> {
+    quality
+        .tiers
+        .iter()
+        .map(|tier| TimetableQualityTierDto {
+            id: tier.id.clone(),
+            priority: tier.priority,
+            value: tier.value.to_string(),
+            metrics: tier
+                .metrics
+                .iter()
+                .map(|metric| TimetableMetricDto {
+                    code: metric.kind.code(),
+                    raw_value: metric.raw_value.to_string(),
+                    weight_within_tier: metric.weight_within_tier,
+                    weighted_value: metric.weighted_value.to_string(),
+                })
+                .collect(),
+        })
+        .collect()
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -285,26 +310,7 @@ impl From<SavedTimetablePage> for SavedTimetableResponse {
             offset: page.offset,
             has_more: page.has_more,
             next_offset: page.next_offset,
-            quality: page
-                .quality
-                .tiers
-                .into_iter()
-                .map(|tier| TimetableQualityTierDto {
-                    id: tier.id,
-                    priority: tier.priority,
-                    value: tier.value.to_string(),
-                    metrics: tier
-                        .metrics
-                        .into_iter()
-                        .map(|metric| TimetableMetricDto {
-                            code: metric.kind.code(),
-                            raw_value: metric.raw_value.to_string(),
-                            weight_within_tier: metric.weight_within_tier,
-                            weighted_value: metric.weighted_value.to_string(),
-                        })
-                        .collect(),
-                })
-                .collect(),
+            quality: quality_dto(&page.quality),
         }
     }
 }
@@ -453,7 +459,7 @@ fn task_error() -> CommandError {
     )
 }
 
-const fn day_code(day: Day) -> &'static str {
+pub(super) const fn day_code(day: Day) -> &'static str {
     match day {
         Day::Monday => "monday",
         Day::Tuesday => "tuesday",

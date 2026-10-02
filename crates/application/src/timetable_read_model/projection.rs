@@ -321,7 +321,7 @@ fn row_text_bytes(row: &TimetableRow) -> usize {
     .saturating_add(512)
 }
 
-fn calendar(
+pub(super) fn calendar(
     input: &TimetableProjectionInput<'_>,
 ) -> Result<Vec<TimetableGridCell>, TimetableQueryError> {
     let slots = input.compiled.problem.timeslots();
@@ -341,6 +341,7 @@ fn calendar(
         .map(|(index, slot)| {
             let period = required(periods.get(&slot.period_index), "period")?;
             Ok(TimetableGridCell {
+                timeslot_id: slot.stable_id,
                 timeslot_index: count(index)?,
                 day: slot.day,
                 day_label: day_label(slot.day).to_owned(),
@@ -362,7 +363,7 @@ fn label<Id>(id: Id, code: &str, name: &str) -> TimetableLabel<Id> {
     }
 }
 
-fn row(
+pub(super) fn row(
     input: &TimetableProjectionInput<'_>,
     assignment: &Assignment,
     activity: &Activity,

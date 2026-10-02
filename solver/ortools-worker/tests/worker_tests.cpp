@@ -209,6 +209,101 @@ void MismatchedTeacherBindingPolicyIsInvalidInput() {
          "inconsistent binding has a stable problem code");
 }
 
+protocol::SolverEnvelope SharedBindingIncumbentRequest(
+    protocol::SolveMode mode) {
+  auto request = ValidRequest();
+  request.mutable_solve_request()->mutable_parameters()->set_mode(mode);
+  auto* problem = request.mutable_solve_request()->mutable_problem();
+  AddSecondIndependentActivity(problem, 2);
+  auto* second = problem->mutable_activities(1);
+  second->set_subject_id(1);
+  second->set_section_id(1);
+  second->set_teacher_binding_id(1);
+  second->mutable_teacher_policy()->mutable_fixed_teacher()->set_teacher_id(1);
+  second->set_section_room_binding_id(1);
+  problem->mutable_section_room_bindings()->RemoveLast();
+  second->set_meeting_pattern_id(1);
+  problem->mutable_meeting_patterns()->RemoveLast();
+  auto* pattern = problem->mutable_meeting_patterns(0);
+  pattern->add_activity_ids(2);
+  pattern->add_duration_periods(1);
+  pattern->set_maximum_periods_per_day(2);
+  auto* conflict = problem->mutable_student_conflicts()->add_edges();
+  conflict->set_left_activity_id(1);
+  conflict->set_right_activity_id(2);
+  for (std::uint32_t id = 1; id <= 2; ++id) {
+    auto* incumbent = problem->add_incumbent_assignments();
+    incumbent->set_activity_id(id);
+    incumbent->set_start_timeslot_id(id);
+    incumbent->set_teacher_id(1);
+    incumbent->set_room_id(1);
+    incumbent->set_duration_periods(1);
+  }
+  return request;
+}
+
+void SharedTeacherAndRoomIncumbentHintsAreAddedOnlyOnce() {
+  for (const auto mode : {protocol::SOLVE_MODE_IMPROVE,
+                          protocol::SOLVE_MODE_REPAIR}) {
+    const auto request = SharedBindingIncumbentRequest(mode);
+    const auto response = SolveEnvelope(request).solve_response();
+    Expect(response.status() == protocol::SOLVER_STATUS_OPTIMAL,
+           "a complete incumbent with shared resource variables is a valid model");
+    Expect(response.assignments_size() == 2,
+           "both meetings sharing incumbent resource hints are returned");
+    if (response.assignments_size() == 2) {
+      Expect(response.assignments(0).teacher_id() == 1 &&
+                 response.assignments(1).teacher_id() == 1 &&
+                 response.assignments(0).room_id() == 1 &&
+                 response.assignments(1).room_id() == 1,
+             "shared fixed teacher and room remain Hard");
+      Expect(response.assignments(0).start_timeslot_id() !=
+                 response.assignments(1).start_timeslot_id(),
+             "shared audience and resource occupancy remain Hard");
+    }
+    if (mode == protocol::SOLVE_MODE_REPAIR) {
+      Expect(response.objective().tiers_size() == 1 &&
+                 response.objective().tiers(0).value() == 0,
+             "a valid shared-binding Repair incumbent needs no changes");
+    }
+  }
+}
+
+void ConflictingSharedResourceIncumbentHintsAreRejected() {
+  for (const bool teacher : {true, false}) {
+    for (const bool reversed : {false, true}) {
+      auto request = SharedBindingIncumbentRequest(protocol::SOLVE_MODE_IMPROVE);
+      auto* problem = request.mutable_solve_request()->mutable_problem();
+      if (teacher) {
+        for (auto& activity : *problem->mutable_activities()) {
+          auto* policy = activity.mutable_teacher_policy();
+          policy->clear_policy();
+          policy->mutable_candidate_teachers()->add_teacher_ids(1);
+          policy->mutable_candidate_teachers()->add_teacher_ids(2);
+        }
+        problem->mutable_incumbent_assignments(1)->set_teacher_id(2);
+      } else {
+        auto* policy = problem->mutable_section_room_bindings(0)->mutable_policy();
+        policy->clear_policy();
+        policy->mutable_section_fixed()->add_candidate_room_ids(1);
+        policy->mutable_section_fixed()->add_candidate_room_ids(2);
+        problem->mutable_incumbent_assignments(1)->set_room_id(2);
+      }
+      if (reversed) {
+        problem->mutable_incumbent_assignments()->SwapElements(0, 1);
+      }
+      const auto response = SolveEnvelope(request).solve_response();
+      Expect(response.status() == protocol::SOLVER_STATUS_INVALID_INPUT,
+             "conflicting shared-variable incumbent values are invalid input");
+      Expect(response.status_detail_code() ==
+                 "WORKER.CONFLICTING_INCUMBENT_HINT",
+             "conflicting resource hints have one stable code in either order");
+      Expect(response.assignments().empty() && response.output_hash().empty(),
+             "conflicting hints never produce a usable timetable");
+    }
+  }
+}
+
 void CourseDistributionUsesARealLexicographicObjective() {
   auto request = ValidRequest();
   auto* problem = request.mutable_solve_request()->mutable_problem();
@@ -331,6 +426,8 @@ int main() {
   CandidateResourcesCanSelectDifferentValuesAtTheSameTime();
   CandidateTeacherBindingIsFixedAcrossMeetings();
   MismatchedTeacherBindingPolicyIsInvalidInput();
+  SharedTeacherAndRoomIncumbentHintsAreAddedOnlyOnce();
+  ConflictingSharedResourceIncumbentHintsAreRejected();
   CourseDistributionUsesARealLexicographicObjective();
   LaterObjectiveCannotSacrificeAnEarlierTier();
   return failures == 0 ? 0 : 1;

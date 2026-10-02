@@ -4,6 +4,9 @@ import type { LoadedRun } from "./solveApi";
 import { ScenarioTimetableWorkspace } from "./TimetableWorkspace";
 import { adoptRunAsScenario, canAdoptRun, copySavedScenario, listSavedScenarios, loadSavedScenario,
   type LoadedScenario, type ScenarioPage, type ScenarioReceipt } from "./scenarioApi";
+import type { ScenarioEditCommitResult } from "./scenarioEditApi";
+import { scenarioTimetableKey } from "./scenarioTimetableApi";
+import { createScenarioEditGuard } from "./scenarioEditState";
 import "./ScenarioPanel.css";
 
 export function ScenarioPanel({ project, selectedRun, disabled }: {
@@ -15,21 +18,24 @@ export function ScenarioPanel({ project, selectedRun, disabled }: {
   const [listing, setListing] = useState(false);
   const [listError, setListError] = useState<CommandError | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
+  const [pendingEdit, setPendingEdit] = useState<ScenarioEditCommitResult | null>(null);
   const [loaded, setLoaded] = useState<LoadedScenario | null>(null);
   const [error, setError] = useState<CommandError | null>(null);
   const [name, setName] = useState("正式方案");
   const [copyName, setCopyName] = useState("");
   const [saved, setSaved] = useState<null | { receipt: ScenarioReceipt; name: string; action: string }>(null);
-  const generation = useRef(0);
-  const operation = useRef(false);
+  const operations = useRef(createScenarioEditGuard()).current;
+  const projectKey = JSON.stringify([project.projectId, project.revision, project.payloadHash]);
   const availableRun = selectedRun !== null && ["Feasible", "Optimal"].includes(selectedRun.run.status) && selectedRun.failureCode === null;
   const adoptable = canAdoptRun(project, selectedRun);
-  const locked = disabled || busy;
+  const locked = disabled || busy || editBusy;
 
-  useEffect(() => () => { generation.current += 1; }, []);
+  useEffect(() => () => { operations.invalidate(); }, [operations]);
   useEffect(() => {
-    generation.current += 1; setLoaded(null); setOffset(0); setError(null); setRefresh((value) => value + 1);
-  }, [project.revision, project.payloadHash]);
+    operations.invalidate(); setBusy(false); setEditBusy(false); setLoaded(null); setPendingEdit(null);
+    setOffset(0); setError(null); setRefresh((value) => value + 1);
+  }, [operations, projectKey]);
   useEffect(() => {
     let current = true;
     setListing(true); setListError(null);
@@ -45,36 +51,63 @@ export function ScenarioPanel({ project, selectedRun, disabled }: {
   }
 
   async function open(scenarioId: string) {
-    if (operation.current || locked) return;
-    operation.current = true; setBusy(true); setError(null); setSaved(null); setLoaded(null);
-    const current = ++generation.current;
+    if (locked) return;
+    const token = operations.begin(projectKey);
+    if (token === null) return;
+    setBusy(true); setError(null); setSaved(null); setLoaded(null); setPendingEdit(null);
     try {
       const value = await loadSavedScenario(scenarioId);
-      if (current === generation.current) display(value);
-    } catch (failure) { if (current === generation.current) setError(commandError(failure)); }
-    finally { operation.current = false; setBusy(false); }
+      if (operations.accepts(token, projectKey)) display(value);
+    } catch (failure) { if (operations.accepts(token, projectKey)) setError(commandError(failure)); }
+    finally { if (operations.accepts(token, projectKey)) { operations.finish(token); setBusy(false); } }
   }
 
   async function create(copy: boolean) {
-    if (operation.current || locked || (copy ? loaded === null || !loaded.sourceIsCurrent : !adoptable || selectedRun === null)) return;
-    operation.current = true; setBusy(true); setError(null); setSaved(null);
-    const current = ++generation.current;
+    if (locked || (copy ? loaded === null || !loaded.sourceIsCurrent || pendingEdit !== null : !adoptable || selectedRun === null)) return;
+    const token = operations.begin(projectKey);
+    if (token === null) return;
+    setBusy(true); setError(null); setSaved(null);
     const displayName = copy ? copyName : name;
     try {
       const receipt = copy && loaded !== null ? await copySavedScenario(loaded, displayName)
         : selectedRun !== null ? await adoptRunAsScenario(selectedRun, displayName) : null;
-      if (receipt === null || current !== generation.current) return;
+      if (receipt === null || !operations.accepts(token, projectKey)) return;
       setSaved({ receipt, name: displayName, action: copy ? "已创建独立副本" : "已正式采用到" });
       setOffset(0); setRefresh((value) => value + 1); setLoaded(null);
       const value = await loadSavedScenario(receipt.scenarioId);
-      if (current === generation.current) display(value);
-    } catch (failure) { if (current === generation.current) setError(commandError(failure)); }
-    finally { operation.current = false; setBusy(false); }
+      if (operations.accepts(token, projectKey)) display(value);
+    } catch (failure) { if (operations.accepts(token, projectKey)) setError(commandError(failure)); }
+    finally { if (operations.accepts(token, projectKey)) { operations.finish(token); setBusy(false); } }
+  }
+
+  async function acceptEditedScenario(result: ScenarioEditCommitResult) {
+    const displayName = loaded?.displayName ?? "已保存方案";
+    if (result.receipt.projectId !== project.projectId || result.receipt.scenarioId !== loaded?.receipt.scenarioId) {
+      throw new Error("调课凭据不属于当前方案，请重新打开方案核对。");
+    }
+    const token = operations.begin(projectKey);
+    if (token === null) return;
+    // The acknowledgement is durable even if the following revalidation fails.
+    setSaved({ receipt: result.receipt, name: displayName, action: result.status === "committed" ? "调课已保存到" : "安排未变化" });
+    setPendingEdit(result); setOffset(0); setRefresh((value) => value + 1); setError(null); setBusy(true);
+    try {
+      const value = await loadSavedScenario(result.receipt.scenarioId);
+      if (!operations.accepts(token, projectKey)) return;
+      if (scenarioTimetableKey(value.receipt) !== scenarioTimetableKey(result.receipt)) {
+        throw { schemaVersion: 1, code: "DESKTOP_SCENARIO_EDIT_RELOAD_CHANGED",
+          message: "调课已保存，但方案随后又发生变化。请从列表重新打开并核对最新方案。", details: null };
+      }
+      display(value); setPendingEdit(null);
+    } catch (failure: unknown) {
+      if (operations.accepts(token, projectKey)) setError(commandError(failure));
+    } finally {
+      if (operations.accepts(token, projectKey)) { operations.finish(token); setBusy(false); }
+    }
   }
 
   return <section className="panel scenario-panel" id="scenarios" aria-busy={busy}>
     <div className="panel-heading"><div><p className="step">明确采用 · 独立保存</p><h2>方案</h2></div>
-      <button type="button" disabled={listing || busy} onClick={() => { setOffset(0); setRefresh((value) => value + 1); }}>刷新方案</button></div>
+      <button type="button" disabled={listing || busy || editBusy} onClick={() => { setOffset(0); setRefresh((value) => value + 1); }}>刷新方案</button></div>
     <p className="scenario-note">采用会创建独立方案及课表版本。每次打开都会按历史输入重新核对成班、课表和品质，源项目的导入版本保持原样。</p>
     {availableRun && <div className="scenario-adopt">
       <h3>采用当前打开的运行</h3>
@@ -87,7 +120,8 @@ export function ScenarioPanel({ project, selectedRun, disabled }: {
     {saved !== null && <div className="scenario-saved" role="status"><strong>{saved.action}「{saved.name}」</strong>
       <span>方案版本 {saved.receipt.scenarioRevision} · 课表版本 {saved.receipt.timetableRevision}</span><code>{saved.receipt.scenarioId}</code></div>}
     {busy && <p role="status">正在保存或独立复核方案…</p>}
-    {error !== null && <div className="solve-error" role="alert">{saved !== null && <p>保存凭据已收到，方案已创建；以下错误来自后续打开复核。</p>}<p>{error.message}</p><code>{error.code}</code></div>}
+    {error !== null && <div className="solve-error" role="alert">{saved !== null && <p>保存凭据已收到，内容已保存；以下错误来自后续打开复核。</p>}<p>{error.message}</p><code>{error.code}</code>
+      {pendingEdit !== null && <button type="button" disabled={locked} onClick={() => { void acceptEditedScenario(pendingEdit); }}>重试打开已保存修订</button>}</div>}
     {listError !== null && <div className="solve-error" role="alert"><p>{listError.message}</p><code>{listError.code}</code></div>}
     {listing && <p role="status">正在读取方案列表…</p>}
     {!listing && page?.scenarios.length === 0 && <p className="scenario-note">此项目还没有已采用的方案。</p>}
@@ -96,8 +130,8 @@ export function ScenarioPanel({ project, selectedRun, disabled }: {
         <time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString("zh-CN", { hour12: false })}</time></div>
       <button type="button" disabled={locked || !item.openable} onClick={() => { void open(item.scenarioId); }}>{item.openable ? "打开并复核" : "标识不受支持"}</button>
     </article>)}</div>
-    {(offset > 0 || page?.hasMore) && <div className="project-pagination"><button type="button" disabled={offset === 0 || listing || busy} onClick={() => setOffset(Math.max(0, offset - 20))}>上一页</button>
-      <span>第 {Math.floor(offset / 20) + 1} 页</span><button type="button" disabled={page?.nextOffset == null || listing || busy} onClick={() => { if (page?.nextOffset != null) setOffset(page.nextOffset); }}>下一页</button></div>}
+    {(offset > 0 || page?.hasMore) && <div className="project-pagination"><button type="button" disabled={offset === 0 || listing || busy || editBusy} onClick={() => setOffset(Math.max(0, offset - 20))}>上一页</button>
+      <span>第 {Math.floor(offset / 20) + 1} 页</span><button type="button" disabled={page?.nextOffset == null || listing || busy || editBusy} onClick={() => { if (page?.nextOffset != null) setOffset(page.nextOffset); }}>下一页</button></div>}
     {loaded !== null && <section className="scenario-detail" aria-label="已复核方案详情">
       <h3>{loaded.displayName}</h3><p>已独立复核 · {loaded.activityCount} 次课 · 打开时来源{loaded.sourceIsCurrent ? "为当前数据版本" : "为历史数据版本"}</p>
       <p>方案版本 {loaded.receipt.scenarioRevision} · 课表版本 {loaded.receipt.timetableRevision} · 来源数据版本 {loaded.receipt.sourceProjectRevision}</p>
@@ -106,14 +140,15 @@ export function ScenarioPanel({ project, selectedRun, disabled }: {
       <p className="scenario-note">下方课表按本方案的独立保存内容查询。原运行课表仍可在运行历史中单独查看。</p>
       {loaded.clonedFrom !== null && <p className="scenario-note">独立复制自方案 <code>{loaded.clonedFrom.scenarioId}</code> 的方案版本 {loaded.clonedFrom.scenarioRevision} / 课表版本 {loaded.clonedFrom.timetableRevision}。</p>}
       <div className="scenario-copy"><label><span>副本名称</span><input value={copyName} maxLength={200} disabled={locked} onChange={(event) => setCopyName(event.target.value)} /></label>
-        <button type="button" disabled={locked || !loaded.sourceIsCurrent || copyName.trim().length === 0} onClick={() => { void create(true); }}>创建独立副本</button></div>
+        <button type="button" disabled={locked || pendingEdit !== null || !loaded.sourceIsCurrent || copyName.trim().length === 0} onClick={() => { void create(true); }}>创建独立副本</button></div>
       {!loaded.sourceIsCurrent && <p className="scenario-note">该方案可按历史数据查看。当前复制命令要求来源仍是当前数据版本。</p>}
       <details className="run-provenance"><summary>方案、课表与来源凭据</summary><dl>
         <dt>方案 ID</dt><dd>{loaded.receipt.scenarioId}</dd><dt>方案摘要 · BLAKE3</dt><dd>{loaded.receipt.scenarioPayloadHash}</dd>
         <dt>课表 ID</dt><dd>{loaded.receipt.timetableId}</dd><dt>课表摘要 · BLAKE3</dt><dd>{loaded.receipt.timetablePayloadHash}</dd>
         <dt>原始运行 ID</dt><dd>{loaded.receipt.originRunId}</dd><dt>原始运行摘要 · BLAKE3</dt><dd>{loaded.receipt.originArtifactHash}</dd>
         <dt>来源数据摘要 · BLAKE3</dt><dd>{loaded.receipt.sourcePayloadHash}</dd></dl></details>
-      <ScenarioTimetableWorkspace receipt={loaded.receipt} displayName={loaded.displayName} sourceIsCurrent={loaded.sourceIsCurrent} />
+      <ScenarioTimetableWorkspace receipt={loaded.receipt} displayName={loaded.displayName} sourceIsCurrent={loaded.sourceIsCurrent}
+        disabled={disabled || busy} blocked={pendingEdit !== null} onEditCommitted={acceptEditedScenario} onEditBusyChange={setEditBusy} />
     </section>}
   </section>;
 }

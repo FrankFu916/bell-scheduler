@@ -19,7 +19,8 @@ function response() {
       startTimeslotIndex: 0, day: "monday", dayLabel: "星期一", periodIndex: 1, periodLabel: "第1节",
       durationPeriods: 2, occupiedTimeslotIndices: [0, 1], grade: entity, subject: entity, coursePlan: entity,
       audience: { kind: "teaching_section", entity }, teacher: entity, room: entity, studentCount: 12 }],
-    calendar: [0, 1].map((index) => ({ timeslotIndex: index, day: "monday", dayLabel: "星期一",
+    activityLocks: [{ activityId: id, sourceLocked: false, userLocked: true }],
+    calendar: [0, 1].map((index) => ({ timeslotId: index === 0 ? id : other, timeslotIndex: index, day: "monday", dayLabel: "星期一",
       periodIndex: index + 1, periodLabel: `第${index + 1}节`, instructionalBlock: 1,
       occupiedCount: 2, pageActivityIds: [id] })),
     totalRows: 2, offset: 0, hasMore: true, nextOffset: 1,
@@ -54,6 +55,8 @@ test("scenario rows preserve history, full duration occupancy and precision with
   assert.equal(page.receipt.sourceProjectRevision, "9007199254740993");
   assert.equal(page.receipt.timetableRevision, "9223372036854775807");
   assert.equal(page.quality[0].value, "9007199254740993");
+  assert.equal(page.activityLocks[0].userLocked, true);
+  assert.equal(page.calendar[1].timeslotId, other);
   assert.deepEqual(page.rows[0].occupiedTimeslotIndices, [0, 1]);
   assert.equal(page.calendar[1].occupiedCount - page.calendar[1].pageActivityIds.length, 1);
   for (const field of ["runId", "adopted", "inputSnapshotHash", "outputHash"]) assert.equal(field in page, false);
@@ -88,6 +91,11 @@ test("invalid scenario envelopes and contradictory row-grid data fail closed", (
     (value) => { value.calendar[0].pageActivityIds = [other]; },
     (value) => { value.quality[0].value = 4; },
     (value) => { value.totalRows = 0; },
+    (value) => { value.activityLocks = []; },
+    (value) => { value.activityLocks[0].activityId = other; },
+    (value) => { value.activityLocks[0].userLocked = "false"; },
+    (value) => { value.activityLocks[0].sourceLocked = true; },
+    (value) => { delete value.calendar[0].timeslotId; },
   ]) {
     const value = response(); mutate(value);
     assert.throws(() => parseScenarioTimetablePage(value), { code: "DESKTOP_SCENARIO_TIMETABLE_INVALID_RESPONSE" });

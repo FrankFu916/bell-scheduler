@@ -10,7 +10,14 @@ interface ScenarioTimetableEnvelope {
   readonly scenarioDisplayName: string;
 }
 export interface ScenarioTimetableEntityPage extends ScenarioTimetableEnvelope, TimetableEntityPageContent {}
-export interface ScenarioTimetablePage extends ScenarioTimetableEnvelope, TimetablePageContent {}
+export interface ScenarioActivityLockState {
+  readonly activityId: string;
+  readonly sourceLocked: boolean;
+  readonly userLocked: boolean;
+}
+export interface ScenarioTimetablePage extends ScenarioTimetableEnvelope, TimetablePageContent {
+  readonly activityLocks: readonly ScenarioActivityLockState[];
+}
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const uuid = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/u.test(value);
@@ -55,8 +62,16 @@ export function parseScenarioTimetableEntityPage(value: unknown): ScenarioTimeta
 }
 
 export function parseScenarioTimetablePage(value: unknown): ScenarioTimetablePage {
-  if (!envelope(value) || !isTimetablePageContent(value)) return invalidResponse();
+  if (!envelope(value) || !isTimetablePageContent(value) || !lockStates(value) ||
+      value.activityLocks.length !== value.rows.length ||
+      !value.activityLocks.every((state, index) => state.activityId === value.rows[index]?.activityId)) return invalidResponse();
   return value;
+}
+
+function lockStates(value: unknown): value is { readonly activityLocks: readonly ScenarioActivityLockState[] } {
+  return record(value) && Array.isArray(value.activityLocks) && value.activityLocks.every((state: unknown) =>
+    record(state) && uuid(state.activityId) && typeof state.sourceLocked === "boolean" &&
+    typeof state.userLocked === "boolean" && !(state.sourceLocked && state.userLocked));
 }
 
 export function checkedScenarioTimetableEntities(value: unknown, receipt: ScenarioReceipt, view: TimetableView,

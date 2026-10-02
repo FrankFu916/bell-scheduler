@@ -114,6 +114,7 @@ pub(super) fn run(args: &ScenarioTimetableArgs) -> Result<RunOutcome, CliFailure
             "validation": "independently_revalidated",
             "selection": page.selection,
             "rows": page.rows,
+            "activity_locks": page.activity_locks,
             "calendar": page.calendar,
             "total_rows": page.total_rows,
             "offset": page.offset,

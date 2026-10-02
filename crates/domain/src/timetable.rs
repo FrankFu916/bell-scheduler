@@ -172,10 +172,11 @@ impl Scenario {
         require_unique(&constraint_ids, "scenario.constraint_ids")?;
         require_unique(&preference_ids, "scenario.preference_ids")?;
         require_unique(&lock_ids, "scenario.lock_ids")?;
+        let next_revision = self.revision.next()?;
         self.constraint_ids = constraint_ids;
         self.preference_ids = preference_ids;
         self.lock_ids = lock_ids;
-        self.revision = self.revision.next()?;
+        self.revision = next_revision;
         Ok(())
     }
 
@@ -227,6 +228,19 @@ impl Timetable {
         scenario_id: ScenarioId,
         meetings: Vec<ScheduledMeeting>,
     ) -> Result<Self, DomainError> {
+        Self::restore(id, scenario_id, Revision::INITIAL, meetings)
+    }
+
+    /// Restores a complete revision without treating each restored meeting as a new edit.
+    ///
+    /// # Errors
+    /// Rejects duplicate meeting or demand identities, as construction of a new timetable does.
+    pub fn restore(
+        id: TimetableId,
+        scenario_id: ScenarioId,
+        revision: Revision,
+        meetings: Vec<ScheduledMeeting>,
+    ) -> Result<Self, DomainError> {
         require_unique_by(
             &meetings,
             |meeting| meeting.id().to_string(),
@@ -240,7 +254,7 @@ impl Timetable {
         Ok(Self {
             id,
             scenario_id,
-            revision: Revision::INITIAL,
+            revision,
             meetings,
         })
     }
@@ -287,8 +301,9 @@ impl Timetable {
                 value: replacement.demand_id().to_string(),
             });
         }
+        let next_revision = self.revision.next()?;
         self.meetings[position] = replacement;
-        self.revision = self.revision.next()?;
+        self.revision = next_revision;
         Ok(())
     }
 }
@@ -354,5 +369,83 @@ mod tests {
             result.unwrap_err().code(),
             ProblemCode::DomainDuplicateValue
         );
+    }
+
+    #[test]
+    fn restored_revision_keeps_identity_and_rejects_duplicate_meetings() {
+        let id = TimetableId::new_v4();
+        let scenario_id = ScenarioId::new_v4();
+        let original = meeting(MeetingDemandId::new_v4());
+        let revision = Revision::from_u64(9_007_199_254_740_993);
+        let restored = Timetable::restore(id, scenario_id, revision, vec![original]).unwrap();
+        assert_eq!(restored.id(), id);
+        assert_eq!(restored.scenario_id(), scenario_id);
+        assert_eq!(restored.revision(), revision);
+        assert_eq!(restored.meetings(), &[original]);
+        assert_eq!(
+            Timetable::restore(id, scenario_id, revision, vec![original, original])
+                .unwrap_err()
+                .code(),
+            ProblemCode::DomainDuplicateValue
+        );
+    }
+
+    #[test]
+    fn failed_meeting_revision_does_not_partially_replace_the_assignment() {
+        let original = meeting(MeetingDemandId::new_v4());
+        let replacement = ScheduledMeeting::new(
+            original.id(),
+            original.demand_id(),
+            MeetingAssignment::new(
+                TimeslotId::new_v4(),
+                original.assignment().duration(),
+                original.assignment().room_id(),
+                original.assignment().teacher_id(),
+            ),
+        );
+        let maximum = Revision::from_u64(u64::MAX);
+        let mut timetable = Timetable::restore(
+            TimetableId::new_v4(),
+            ScenarioId::new_v4(),
+            maximum,
+            vec![original],
+        )
+        .unwrap();
+        let before = timetable.clone();
+        assert_eq!(
+            timetable.replace_meeting(maximum, replacement).unwrap_err(),
+            DomainError::RevisionOverflow
+        );
+        assert_eq!(timetable, before);
+        assert!(matches!(
+            timetable.replace_meeting(Revision::INITIAL, replacement),
+            Err(DomainError::RevisionConflict { .. })
+        ));
+        assert_eq!(timetable, before);
+    }
+
+    #[test]
+    fn configuration_overflow_preserves_every_original_collection() {
+        let mut scenario = Scenario::new(
+            ScenarioId::new_v4(),
+            SchoolProjectId::new_v4(),
+            Name::new("Original scenario").unwrap(),
+            ScenarioBase::Empty,
+        )
+        .unwrap();
+        scenario.revision = Revision::from_u64(u64::MAX);
+        let before = scenario.clone();
+        assert_eq!(
+            scenario
+                .replace_configuration(
+                    scenario.revision(),
+                    vec![ConstraintId::new_v4()],
+                    vec![PreferenceId::new_v4()],
+                    vec![LockId::new_v4()]
+                )
+                .unwrap_err(),
+            DomainError::RevisionOverflow
+        );
+        assert_eq!(scenario, before);
     }
 }

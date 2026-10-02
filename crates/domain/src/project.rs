@@ -42,8 +42,9 @@ impl SchoolProject {
 
     pub fn rename(&mut self, expected_revision: Revision, name: Name) -> Result<(), DomainError> {
         self.revision.ensure(expected_revision)?;
+        let next_revision = self.revision.next()?;
         self.name = name;
-        self.revision = self.revision.next()?;
+        self.revision = next_revision;
         Ok(())
     }
 
@@ -53,8 +54,9 @@ impl SchoolProject {
         active_term_id: Option<AcademicTermId>,
     ) -> Result<(), DomainError> {
         self.revision.ensure(expected_revision)?;
+        let next_revision = self.revision.next()?;
         self.active_term_id = active_term_id;
-        self.revision = self.revision.next()?;
+        self.revision = next_revision;
         Ok(())
     }
 }
@@ -89,5 +91,32 @@ impl Grade {
     #[must_use]
     pub const fn name(&self) -> &Name {
         &self.name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn revision_overflow_preserves_project_name_and_active_term() {
+        let mut project =
+            SchoolProject::new(SchoolProjectId::new_v4(), Name::new("Original").unwrap());
+        project.revision = Revision::from_u64(u64::MAX);
+        let before = project.clone();
+        assert_eq!(
+            project
+                .rename(project.revision(), Name::new("Replacement").unwrap())
+                .unwrap_err(),
+            DomainError::RevisionOverflow
+        );
+        assert_eq!(project, before);
+        assert_eq!(
+            project
+                .set_active_term(project.revision(), Some(AcademicTermId::new_v4()))
+                .unwrap_err(),
+            DomainError::RevisionOverflow
+        );
+        assert_eq!(project, before);
     }
 }

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::import_commit::{database_path, open_store, parse_revision, validate_schema};
-use crate::timetable_queries::{TimetableMetricDto, TimetableQualityTierDto};
+use crate::timetable_queries::{TimetableQualityTierDto, quality_dto};
 use crate::{COMMAND_SCHEMA_VERSION, CommandError};
 
 #[derive(Debug, Deserialize)]
@@ -136,26 +136,7 @@ fn loaded_dto(loaded: &LoadedScenario) -> Result<LoadedScenarioDto, CommandError
                 .materialized_sectioning()
                 .map_or(0, |value| value.enrollments.len()),
         )?,
-        quality: loaded
-            .quality()
-            .tiers
-            .iter()
-            .map(|tier| TimetableQualityTierDto {
-                id: tier.id.clone(),
-                priority: tier.priority,
-                value: tier.value.to_string(),
-                metrics: tier
-                    .metrics
-                    .iter()
-                    .map(|metric| TimetableMetricDto {
-                        code: metric.kind.code(),
-                        raw_value: metric.raw_value.to_string(),
-                        weight_within_tier: metric.weight_within_tier,
-                        weighted_value: metric.weighted_value.to_string(),
-                    })
-                    .collect(),
-            })
-            .collect(),
+        quality: quality_dto(loaded.quality()),
         cloned_from: loaded.lineage().map(|lineage| ScenarioLineageDto {
             scenario_id: lineage.scenario_id.to_string(),
             scenario_revision: lineage.scenario_revision.to_string(),

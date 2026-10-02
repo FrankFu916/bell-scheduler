@@ -25,6 +25,7 @@ pub mod managed_worker;
 mod problem_messages;
 mod project_queries;
 mod scenario_commands;
+mod scenario_edit_commands;
 mod scenario_export;
 mod scenario_timetable_queries;
 mod solve_commands;
@@ -703,6 +704,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(scenario_export::ScenarioExportJobs::default())
+        .manage(scenario_edit_commands::ScenarioEditJobs::default())
         .manage(solve_commands::SolveJobs::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -727,6 +729,8 @@ pub fn run() {
             scenario_commands::copy_saved_scenario,
             scenario_commands::load_saved_scenario,
             scenario_commands::list_saved_scenarios,
+            scenario_edit_commands::preview_scenario_edit,
+            scenario_edit_commands::commit_scenario_edit,
             scenario_export::export_scenario_timetable,
             scenario_timetable_queries::query_scenario_timetable,
             scenario_timetable_queries::query_scenario_timetable_entities,

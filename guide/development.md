@@ -138,6 +138,8 @@ target/rust-1.88.0/debug/class-schedule-cli solve \
 
 `export-scenario` 使用相同的方案 ID、双预期版本、`--view` 和 `--entity-id`，通过 `--format xlsx|csv` 和 `--output` 保存完整课表；不接受分页参数。目标父目录必须存在，文件扩展名应匹配格式，现有目标不会被覆盖。命令使用只读数据库连接，并在完整渲染成功后原子发布新文件。`show-scenario` 同样使用只读连接。文件用途和桌面操作见 [课表导出指南](exporting.md)。
 
+`preview-scenario-edit` 支持移动、交换起点、锁定和解锁，使用只读连接返回完整 Hard 检查、品质变化与方案信息。`commit-scenario-edit` 携带相同操作、双预期版本和预览返回的双 payload hash，重新验证后在事务中追加修订。提交连接不会创建或迁移数据库，旧数据库需先通过项目打开流程升级。无变化的操作不新增版本，失败不产生部分修订。具体操作见 [调课与锁定指南](adjusting.md)。
+
 ## 提交前检查与代码边界
 
 完整 macOS 检查需要先准备上述工具和归档：

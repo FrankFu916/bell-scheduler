@@ -1,4 +1,8 @@
-//! Atomic scenario creation with independent immutable scenario and timetable payloads.
+//! Atomic scenario creation and revisions with independent immutable timetable payloads.
+
+mod revisions;
+
+pub use revisions::ScenarioRevisionExpectation;
 
 use chrono::{DateTime, Utc};
 use rusqlite::{OptionalExtension, Transaction, TransactionBehavior, params};
@@ -42,6 +46,9 @@ pub struct StoredScenario {
     pub document: ScenarioDocument,
     pub scenario_payload_hash: [u8; 32],
     pub timetable_payload_hash: [u8; 32],
+    /// Timestamp shared by the selected scenario and timetable revisions. The document's
+    /// `created_at` remains the original scenario creation time across every revision.
+    pub revision_created_at: DateTime<Utc>,
 }
 
 /// Metadata only. Payload integrity and business validity require a separate scenario load.
@@ -438,6 +445,14 @@ fn read_scenario(
         )
         .optional()?
         .ok_or_else(|| invalid("PERSISTENCE_SCENARIO_NOT_FOUND", "scenario was not found"))?;
+    read_scenario_revision(tx, scenario_id, revision)
+}
+
+fn read_scenario_revision(
+    tx: &Transaction<'_>,
+    scenario_id: &str,
+    revision: u64,
+) -> Result<StoredScenario, PersistenceError> {
     let lengths: (u64, u64) = tx.query_row(
         "SELECT length(r.payload), length(t.payload) FROM scenario_revisions r
          JOIN timetable_revisions t ON t.scenario_id = r.scenario_id AND t.scenario_revision = r.scenario_revision
@@ -447,7 +462,8 @@ fn read_scenario(
     ).optional()?.ok_or_else(relation_error)?;
     check_length(lengths.0)?;
     check_length(lengths.1)?;
-    let (document, scenario_hash, timetable_hash) = read_payloads(tx, scenario_id, revision)?;
+    let (document, scenario_hash, timetable_hash, revision_created_at) =
+        read_payloads(tx, scenario_id, revision)?;
     let scenario_payload_hash = *blake3::hash(&document.scenario_payload).as_bytes();
     let timetable_payload_hash = *blake3::hash(&document.timetable_payload).as_bytes();
     checked_hash(
@@ -463,23 +479,32 @@ fn read_scenario(
         "PERSISTENCE_TIMETABLE_HASH_MISMATCH",
     )?;
     document.validate()?;
+    if revision_created_at.timestamp_subsec_nanos() % 1_000_000 != 0
+        || revision_created_at < document.created_at
+        || (revision == 0 && revision_created_at != document.created_at)
+    {
+        return Err(relation_error());
+    }
     Ok(StoredScenario {
         document,
         scenario_payload_hash,
         timetable_payload_hash,
+        revision_created_at,
     })
 }
+
+type ScenarioPayloadRow = (ScenarioDocument, Vec<u8>, Vec<u8>, DateTime<Utc>);
 
 fn read_payloads(
     tx: &Transaction<'_>,
     scenario_id: &str,
     revision: u64,
-) -> Result<(ScenarioDocument, Vec<u8>, Vec<u8>), PersistenceError> {
+) -> Result<ScenarioPayloadRow, PersistenceError> {
     tx.query_row(
         "SELECT s.timetable_id, s.project_id, s.display_name, r.timetable_revision,
          r.source_project_revision, r.source_payload_hash, r.origin_run_id, r.origin_artifact_hash,
          r.scenario_schema_version, r.payload, t.timetable_schema_version, t.payload,
-         r.created_at, r.payload_hash, t.payload_hash
+         s.created_at, r.payload_hash, t.payload_hash, r.created_at
          FROM scenarios s JOIN scenario_revisions r ON s.scenario_id = r.scenario_id
           AND s.project_id = r.project_id AND s.timetable_id = r.timetable_id
          JOIN timetable_revisions t ON t.scenario_id = r.scenario_id AND t.scenario_revision = r.scenario_revision
@@ -493,6 +518,6 @@ fn read_payloads(
             source_project_revision: row.get(4)?, source_payload_hash: row.get(5)?, origin_run_id: row.get(6)?,
             origin_artifact_hash: row.get(7)?, scenario_schema_version: row.get(8)?, scenario_payload: row.get(9)?,
             timetable_schema_version: row.get(10)?, timetable_payload: row.get(11)?, created_at: row.get(12)?,
-        }, row.get(13)?, row.get(14)?)),
+        }, row.get(13)?, row.get(14)?, row.get(15)?)),
     ).optional()?.ok_or_else(relation_error)
 }

@@ -26,6 +26,7 @@ class-schedule-application = { path = "../../../crates/application" }
 class-schedule-domain = { path = "../../../crates/domain" }
 class-schedule-import = { path = "../../../crates/import" }
 class-schedule-persistence = { path = "../../../crates/persistence" }
+class-schedule-scoring = { path = "../../../crates/scoring" }
 class-schedule-validation = { path = "../../../crates/validation" }
 serde.workspace = true
 serde_json.workspace = true

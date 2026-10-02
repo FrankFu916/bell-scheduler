@@ -317,7 +317,9 @@ fn scenario_dtos_preserve_identity_history_large_integers_and_shared_grid_semant
         scenario_display_name: "历史方案".into(),
         selection: entity(),
         rows: Vec::new(),
+        activity_locks: Vec::new(),
         calendar: vec![TimetableGridCell {
+            timeslot_id: ENTITY_ID.parse().unwrap(),
             timeslot_index: 0,
             day: Day::Monday,
             day_label: "周一".into(),
@@ -356,6 +358,8 @@ fn scenario_dtos_preserve_identity_history_large_integers_and_shared_grid_semant
     assert_eq!(entities["view"], "student");
     assert_eq!(entities["entities"][0]["id"], ENTITY_ID);
     assert_eq!(page["calendar"][0]["occupiedCount"], 2);
+    assert_eq!(page["calendar"][0]["timeslotId"], ENTITY_ID);
+    assert_eq!(page["activityLocks"], json!([]));
     assert_eq!(page["calendar"][0]["day"], "monday");
     assert_eq!(page["calendar"][0]["pageActivityIds"], json!([]));
     assert_eq!(page["quality"][0]["value"], "9007199254740993");
@@ -367,6 +371,25 @@ fn scenario_dtos_preserve_identity_history_large_integers_and_shared_grid_semant
         page["quality"][0]["metrics"][0]["weightedValue"],
         "9007199254740993"
     );
+}
+
+#[test]
+fn activity_lock_dto_preserves_stable_activity_and_separate_lock_sources() {
+    for (source_locked, user_locked) in [(true, false), (false, true), (false, false)] {
+        let wire = serde_json::to_value(ScenarioActivityLockStateDto::from(
+            ScenarioActivityLockState {
+                activity_id: ENTITY_ID.parse().unwrap(),
+                source_locked,
+                user_locked,
+            },
+        ))
+        .unwrap();
+        assert_eq!(
+            wire,
+            json!({"activityId":ENTITY_ID,
+            "sourceLocked":source_locked,"userLocked":user_locked})
+        );
+    }
 }
 
 #[test]

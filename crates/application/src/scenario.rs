@@ -1,9 +1,15 @@
 //! Explicit adoption and independent copies of revalidated saved runs.
 
 mod document;
+mod edit;
+mod version_two;
+
+pub use edit::*;
 
 use chrono::{DateTime, Utc};
-use class_schedule_domain::{ScenarioId, SchoolProjectId, SolverRunId, Timetable, TimetableId};
+use class_schedule_domain::{
+    Lock, ScenarioId, SchoolProjectId, SolverRunId, Timetable, TimetableId,
+};
 use class_schedule_persistence::{
     CopyScenarioSource, PersistenceError, ScenarioDocument, SqliteStore,
 };
@@ -22,6 +28,7 @@ use document::{
 
 pub const SCENARIO_DOCUMENT_SCHEMA_VERSION: u32 = 1;
 pub const TIMETABLE_DOCUMENT_SCHEMA_VERSION: u32 = 1;
+pub const SCENARIO_EDIT_DOCUMENT_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Clone, Debug)]
 pub struct AdoptRunCommand {
@@ -98,6 +105,8 @@ pub struct LoadedScenario {
     assignments: Vec<Assignment>,
     timetable: Timetable,
     quality: ObjectiveVector,
+    scenario_payload: ScenarioPayload,
+    timetable_payload: TimetablePayload,
 }
 
 impl LoadedScenario {
@@ -130,6 +139,12 @@ impl LoadedScenario {
     }
     pub const fn quality(&self) -> &ObjectiveVector {
         &self.quality
+    }
+    pub fn user_locks(&self) -> &[Lock] {
+        self.timetable_payload
+            .user_locks
+            .as_deref()
+            .unwrap_or_default()
     }
 }
 
@@ -227,13 +242,19 @@ pub fn prepare_clone_scenario(
         expected_timetable_revision: lineage.timetable_revision,
         expected_timetable_payload_hash: lineage.timetable_payload_hash,
     };
-    let loaded = load_solve_artifact(store, &receipt.origin_run_id.to_string())?;
-    let (scenario, timetable) = build_documents(
-        &loaded,
-        command.scenario_id,
-        &command.display_name,
-        Some(lineage),
-    )?;
+    let (scenario, timetable) = if parent.scenario_payload.schema_version
+        == SCENARIO_EDIT_DOCUMENT_SCHEMA_VERSION
+    {
+        version_two::copy_documents(&parent, command.scenario_id, &command.display_name, lineage)?
+    } else {
+        let loaded = load_solve_artifact(store, &receipt.origin_run_id.to_string())?;
+        build_documents(
+            &loaded,
+            command.scenario_id,
+            &command.display_name,
+            Some(lineage),
+        )?
+    };
     prepare_documents(&scenario, &timetable, Some(expected))
 }
 
@@ -266,6 +287,7 @@ pub fn load_scenario(
     let loaded = load_solve_artifact(store, &scenario.origin_run_id.to_string())?;
     let (compiled, assignments, domain_timetable, quality) =
         replay_timetable(&loaded, &scenario, &timetable)?;
+    version_two::validate_previous_edge(store, &loaded, &scenario, &timetable)?;
     let current = store.load_project(&scenario.project_id.to_string())?;
     let source_is_current = current.revision == scenario.source_project_revision
         && blake3::hash(&current.payload).as_bytes() == &scenario.source_payload_hash;
@@ -276,15 +298,17 @@ pub fn load_scenario(
             stored.scenario_payload_hash,
             stored.timetable_payload_hash,
         ),
-        display_name: scenario.display_name,
-        lineage: scenario.lineage,
+        display_name: scenario.display_name.clone(),
+        lineage: scenario.lineage.clone(),
         source_is_current,
         source_document: loaded.source_document().clone(),
-        materialized_sectioning: scenario.materialized_sectioning,
+        materialized_sectioning: scenario.materialized_sectioning.clone(),
         compiled,
         assignments,
         timetable: domain_timetable,
         quality,
+        scenario_payload: scenario,
+        timetable_payload: timetable,
     })
 }
 
@@ -312,9 +336,9 @@ fn prepare_documents(
         source_payload_hash: scenario.source_payload_hash,
         origin_run_id: scenario.origin_run_id.to_string(),
         origin_artifact_hash: scenario.origin_artifact_hash,
-        scenario_schema_version: SCENARIO_DOCUMENT_SCHEMA_VERSION,
+        scenario_schema_version: scenario.schema_version,
         scenario_payload,
-        timetable_schema_version: TIMETABLE_DOCUMENT_SCHEMA_VERSION,
+        timetable_schema_version: timetable.schema_version,
         timetable_payload,
         created_at: scenario.created_at,
     };

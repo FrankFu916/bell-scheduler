@@ -31,6 +31,7 @@ export interface TimetableRow {
   readonly teacher: TimetableEntity; readonly room: TimetableEntity; readonly studentCount: number;
 }
 export interface TimetableGridCell {
+  readonly timeslotId: string;
   readonly timeslotIndex: number; readonly day: TimetableDay; readonly dayLabel: string;
   readonly periodIndex: number; readonly periodLabel: string; readonly instructionalBlock: number;
   readonly occupiedCount: number; readonly pageActivityIds: readonly string[];
@@ -69,7 +70,7 @@ const view = (value: unknown): value is TimetableView => TIMETABLE_VIEWS.some((i
 const page = (value: Record<string, unknown>): boolean => integer(value.offset) && typeof value.hasMore === "boolean" &&
   (value.hasMore ? integer(value.nextOffset) && value.nextOffset > value.offset : value.nextOffset === null);
 
-function row(value: unknown): value is TimetableRow {
+export function isTimetableRow(value: unknown): value is TimetableRow {
   return record(value) && uuid(value.activityId) && integer(value.activityIndex) && uuid(value.courseOfferingId) &&
     positive(value.meetingOrdinal) && integer(value.startTimeslotIndex) && day(value.day) && text(value.dayLabel) &&
     positive(value.periodIndex) && text(value.periodLabel) && positive(value.durationPeriods) && value.durationPeriods <= 255 &&
@@ -81,12 +82,12 @@ function row(value: unknown): value is TimetableRow {
 }
 
 function cell(value: unknown): value is TimetableGridCell {
-  return record(value) && integer(value.timeslotIndex) && day(value.day) && text(value.dayLabel) &&
+  return record(value) && uuid(value.timeslotId) && integer(value.timeslotIndex) && day(value.day) && text(value.dayLabel) &&
     positive(value.periodIndex) && text(value.periodLabel) && positive(value.instructionalBlock) && integer(value.occupiedCount) &&
     Array.isArray(value.pageActivityIds) && value.pageActivityIds.every(uuid) && value.pageActivityIds.length <= value.occupiedCount;
 }
 
-function tier(value: unknown): value is TimetableQualityTier {
+export function isTimetableQualityTier(value: unknown): value is TimetableQualityTier {
   return record(value) && text(value.id) && positive(value.priority) && decimal(value.value) && Array.isArray(value.metrics) &&
     value.metrics.every((metric: unknown) => record(metric) && text(metric.code) && decimal(metric.rawValue) &&
       positive(metric.weightWithinTier) && decimal(metric.weightedValue));
@@ -105,8 +106,8 @@ export function isTimetableEntityPageContent(value: unknown): value is Timetable
 export function isTimetablePageContent(value: unknown): value is TimetablePageContent {
   if (!record(value) || !entity(value.selection) || !page(value) || !integer(value.totalRows) || !Array.isArray(value.rows) ||
       value.rows.length > 100 || value.rows.length > value.totalRows ||
-      !value.rows.every(row) || !Array.isArray(value.calendar) || value.calendar.length === 0 || value.calendar.length > 4096 ||
-      !value.calendar.every(cell) || !Array.isArray(value.quality) || !value.quality.every(tier)) {
+      !value.rows.every(isTimetableRow) || !Array.isArray(value.calendar) || value.calendar.length === 0 || value.calendar.length > 4096 ||
+      !value.calendar.every(cell) || !Array.isArray(value.quality) || !value.quality.every(isTimetableQualityTier)) {
     return false;
   }
   const rows = value.rows as TimetableRow[];
@@ -116,6 +117,7 @@ export function isTimetablePageContent(value: unknown): value is TimetablePageCo
   const rowMap = new Map(rows.map((item) => [item.activityId, item]));
   const cellMap = new Map(calendar.map((item) => [item.timeslotIndex, item]));
   return rowIds.size === rows.length && slotIds.size === calendar.length &&
+    new Set(calendar.map((item) => item.timeslotId)).size === calendar.length &&
     calendar.every((item) => new Set(item.pageActivityIds).size === item.pageActivityIds.length &&
       item.pageActivityIds.every((id) => rowMap.get(id)?.occupiedTimeslotIndices.includes(item.timeslotIndex))) &&
     rows.every((item) => item.occupiedTimeslotIndices[0] === item.startTimeslotIndex &&

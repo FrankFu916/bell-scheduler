@@ -1,6 +1,9 @@
-use class_schedule_domain::{Revision, ScenarioId};
+use std::collections::BTreeSet;
+
+use class_schedule_domain::{MeetingDemandId, Revision, ScenarioId};
 use class_schedule_persistence::SqliteStore;
 use class_schedule_scoring::ObjectiveVector;
+use serde::Serialize;
 use thiserror::Error;
 
 use super::{
@@ -10,6 +13,14 @@ use super::{
 use crate::{LoadedScenario, ScenarioApplicationError, ScenarioReceipt, load_scenario};
 
 pub const SCENARIO_TIMETABLE_READ_MODEL_SCHEMA_VERSION: u32 = 1;
+
+/// Lock authority is supplied by the loaded scenario, never inferred from a page's occupancy.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct ScenarioActivityLockState {
+    pub activity_id: MeetingDemandId,
+    pub source_locked: bool,
+    pub user_locked: bool,
+}
 
 /// A projection of this adopted scenario's own revalidated timetable and complete identity.
 /// Transports map the receipt's revisions and quality integers to their explicit wire DTOs.
@@ -21,6 +32,8 @@ pub struct ScenarioTimetablePage {
     pub scenario_display_name: String,
     pub selection: TimetableEntityOption,
     pub rows: Vec<TimetableRow>,
+    /// Exactly one entry per row, in the same order. Source locks cannot be removed by an edit.
+    pub activity_locks: Vec<ScenarioActivityLockState>,
     pub calendar: Vec<TimetableGridCell>,
     pub total_rows: u32,
     pub offset: u32,
@@ -102,6 +115,7 @@ pub fn query_scenario_timetable(
             view: query.filter.view(),
         })?;
     let (rows, calendar, total_rows) = projection::project(&input, query)?;
+    let activity_locks = activity_lock_states(&loaded, &rows);
     let has_more = next < total_rows;
     Ok(ScenarioTimetablePage {
         schema_version: SCENARIO_TIMETABLE_READ_MODEL_SCHEMA_VERSION,
@@ -110,6 +124,7 @@ pub fn query_scenario_timetable(
         scenario_display_name: loaded.display_name().to_owned(),
         selection,
         rows,
+        activity_locks,
         calendar,
         total_rows,
         offset: query.offset,
@@ -117,6 +132,38 @@ pub fn query_scenario_timetable(
         next_offset: has_more.then_some(next),
         quality: loaded.quality().clone(),
     })
+}
+
+fn activity_lock_states(
+    loaded: &LoadedScenario,
+    rows: &[TimetableRow],
+) -> Vec<ScenarioActivityLockState> {
+    let source_locked: BTreeSet<_> = loaded
+        .compiled()
+        .problem
+        .locks()
+        .iter()
+        .map(|lock| lock.assignment.activity.0)
+        .collect();
+    let locked_meetings: BTreeSet<_> = loaded
+        .user_locks()
+        .iter()
+        .map(|lock| lock.scheduled_meeting_id())
+        .collect();
+    let user_locked: BTreeSet<_> = loaded
+        .timetable()
+        .meetings()
+        .iter()
+        .filter(|meeting| locked_meetings.contains(&meeting.id()))
+        .map(|meeting| meeting.demand_id())
+        .collect();
+    rows.iter()
+        .map(|row| ScenarioActivityLockState {
+            activity_id: row.activity_id,
+            source_locked: source_locked.contains(&row.activity_index),
+            user_locked: user_locked.contains(&row.activity_id),
+        })
+        .collect()
 }
 
 /// Lists one view's labels from the exact revalidated scenario and timetable revisions.

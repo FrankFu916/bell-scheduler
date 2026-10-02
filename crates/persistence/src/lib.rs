@@ -18,8 +18,8 @@ use thiserror::Error;
 mod scenarios;
 mod solve_artifacts;
 pub use scenarios::{
-    CopyScenarioSource, MAXIMUM_SCENARIO_PAYLOAD_BYTES, ScenarioDocument, ScenarioSummary,
-    StoredScenario,
+    CopyScenarioSource, MAXIMUM_SCENARIO_PAYLOAD_BYTES, ScenarioDocument,
+    ScenarioRevisionExpectation, ScenarioSummary, StoredScenario,
 };
 pub use solve_artifacts::{
     MAXIMUM_SOLVE_ARTIFACT_BYTES, SolveArtifactDocument, SolveArtifactSummary, StoredSolveArtifact,
@@ -222,6 +222,24 @@ impl SqliteStore {
             path,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         )?;
+        Self::from_existing_connection(connection)
+    }
+
+    /// Opens an existing current-schema database for validated writes, without creating it
+    /// or running migrations. A path removed before opening remains missing.
+    ///
+    /// # Errors
+    /// Rejects missing, inaccessible, malformed or incompatible databases. Older databases
+    /// require an explicit normal project-open workflow to perform migrations.
+    pub fn open_existing(path: impl AsRef<Path>) -> Result<Self, PersistenceError> {
+        let connection = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        Self::from_existing_connection(connection)
+    }
+
+    fn from_existing_connection(connection: Connection) -> Result<Self, PersistenceError> {
         connection.pragma_update(None, "foreign_keys", true)?;
         connection.busy_timeout(std::time::Duration::from_secs(5))?;
         let store = Self { connection };
@@ -236,7 +254,7 @@ impl SqliteStore {
             return Err(PersistenceError::InvalidDocument {
                 code: "PERSISTENCE_SCHEMA_UPGRADE_REQUIRED",
                 detail: format!(
-                    "read-only access requires schema {DATABASE_SCHEMA_VERSION}; found {found}"
+                    "existing database access requires schema {DATABASE_SCHEMA_VERSION}; found {found}"
                 ),
             });
         }

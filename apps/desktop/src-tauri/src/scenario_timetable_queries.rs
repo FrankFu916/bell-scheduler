@@ -3,7 +3,8 @@
 use std::path::Path;
 
 use class_schedule_application::{
-    ScenarioTimetableEntityPage, ScenarioTimetablePage, ScenarioTimetableQueryError, TimetableQuery,
+    ScenarioActivityLockState, ScenarioTimetableEntityPage, ScenarioTimetablePage,
+    ScenarioTimetableQueryError, TimetableQuery,
 };
 use class_schedule_domain::{Revision, ScenarioId};
 use class_schedule_persistence::SqliteStore;
@@ -14,8 +15,8 @@ use crate::CommandError;
 use crate::import_commit::{database_path, parse_revision, validate_schema};
 use crate::scenario_commands::ScenarioReceiptDto;
 use crate::timetable_queries::{
-    TimetableEntityDto, TimetableGridCellDto, TimetableMetricDto, TimetableQualityTierDto,
-    TimetableRowDto, TimetableViewDto, decode_filter, validate_page,
+    TimetableEntityDto, TimetableGridCellDto, TimetableQualityTierDto, TimetableRowDto,
+    TimetableViewDto, decode_filter, quality_dto, validate_page,
 };
 
 #[cfg(test)]
@@ -87,12 +88,31 @@ pub struct ScenarioTimetableResponse {
     pub scenario_display_name: String,
     pub selection: TimetableEntityDto,
     pub rows: Vec<TimetableRowDto>,
+    pub activity_locks: Vec<ScenarioActivityLockStateDto>,
     pub calendar: Vec<TimetableGridCellDto>,
     pub total_rows: u32,
     pub offset: u32,
     pub has_more: bool,
     pub next_offset: Option<u32>,
     pub quality: Vec<TimetableQualityTierDto>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScenarioActivityLockStateDto {
+    pub activity_id: String,
+    pub source_locked: bool,
+    pub user_locked: bool,
+}
+
+impl From<ScenarioActivityLockState> for ScenarioActivityLockStateDto {
+    fn from(lock: ScenarioActivityLockState) -> Self {
+        Self {
+            activity_id: lock.activity_id.to_string(),
+            source_locked: lock.source_locked,
+            user_locked: lock.user_locked,
+        }
+    }
 }
 
 impl From<ScenarioTimetablePage> for ScenarioTimetableResponse {
@@ -104,31 +124,13 @@ impl From<ScenarioTimetablePage> for ScenarioTimetableResponse {
             scenario_display_name: page.scenario_display_name,
             selection: page.selection.into(),
             rows: page.rows.into_iter().map(Into::into).collect(),
+            activity_locks: page.activity_locks.into_iter().map(Into::into).collect(),
             calendar: page.calendar.into_iter().map(Into::into).collect(),
             total_rows: page.total_rows,
             offset: page.offset,
             has_more: page.has_more,
             next_offset: page.next_offset,
-            quality: page
-                .quality
-                .tiers
-                .into_iter()
-                .map(|tier| TimetableQualityTierDto {
-                    id: tier.id,
-                    priority: tier.priority,
-                    value: tier.value.to_string(),
-                    metrics: tier
-                        .metrics
-                        .into_iter()
-                        .map(|metric| TimetableMetricDto {
-                            code: metric.kind.code(),
-                            raw_value: metric.raw_value.to_string(),
-                            weight_within_tier: metric.weight_within_tier,
-                            weighted_value: metric.weighted_value.to_string(),
-                        })
-                        .collect(),
-                })
-                .collect(),
+            quality: quality_dto(&page.quality),
         }
     }
 }
@@ -224,6 +226,23 @@ fn query_timetable_inner(
 }
 
 pub(super) fn open_query_store(database: &Path) -> Result<SqliteStore, CommandError> {
+    validate_database_path(database)?;
+    SqliteStore::open_readonly(database).map_err(|error| {
+        let code = error.code();
+        let message = match code {
+            "PERSISTENCE_SCHEMA_UPGRADE_REQUIRED" => {
+                "本机项目库需要升级，请先使用兼容版本打开项目。"
+            }
+            "PERSISTENCE_UNSUPPORTED_SCHEMA" => {
+                "本机项目库版本不受支持，请使用与该项目库兼容的应用版本。"
+            }
+            _ => "无法以只读方式打开本机项目库。",
+        };
+        CommandError::new(code, message)
+    })
+}
+
+pub(super) fn validate_database_path(database: &Path) -> Result<(), CommandError> {
     let metadata = std::fs::symlink_metadata(database).map_err(|error| {
         if error.kind() == std::io::ErrorKind::NotFound {
             CommandError::new(
@@ -240,19 +259,7 @@ pub(super) fn open_query_store(database: &Path) -> Result<SqliteStore, CommandEr
             "本机项目库不是普通文件，无法读取方案课表。",
         ));
     }
-    SqliteStore::open_readonly(database).map_err(|error| {
-        let code = error.code();
-        let message = match code {
-            "PERSISTENCE_SCHEMA_UPGRADE_REQUIRED" => {
-                "本机项目库需要升级，请先使用兼容版本打开项目。"
-            }
-            "PERSISTENCE_UNSUPPORTED_SCHEMA" => {
-                "本机项目库版本不受支持，请使用与该项目库兼容的应用版本。"
-            }
-            _ => "无法以只读方式打开本机项目库。",
-        };
-        CommandError::new(code, message)
-    })
+    Ok(())
 }
 
 #[tauri::command]

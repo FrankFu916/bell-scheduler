@@ -3,7 +3,7 @@
   "scope": "All registry dependencies in Cargo.lock and frontend/package-lock.json, including build, test, and platform-optional packages; not a binary SBOM.",
   "license_metadata_policy": "Declared expressions are preserved verbatim; they do not replace upstream license texts, copyright notices, or component-level review.",
   "lockfiles": {
-    "Cargo.lock": "6f2c20313bc5b801b5375546be7171732550d6a8406f19f55d306ed9a15b664f",
+    "Cargo.lock": "f031ded35992d26f60a377715f5e0b27f56fae7eb6f88f9a101e877ca21e6960",
     "frontend/package-lock.json": "657e7098471582766ecc2f9b109e64713729ff2968aa46a756f319d597c76218"
   },
   "rust": [

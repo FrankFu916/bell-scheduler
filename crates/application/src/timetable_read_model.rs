@@ -2,7 +2,7 @@
 
 use class_schedule_domain::{
     AdministrativeClassId, CourseOfferingId, CoursePlanId, Day, GradeId, MeetingDemandId, RoomId,
-    SchoolProjectId, StudentId, SubjectId, TeacherId, TeachingSectionId,
+    SchoolProjectId, StudentId, SubjectId, TeacherId, TeachingSectionId, TimeslotId,
 };
 use class_schedule_import::TeachingSectionImportRow;
 use class_schedule_persistence::SqliteStore;
@@ -18,16 +18,19 @@ use crate::{
     load_solve_artifact,
 };
 
+mod edit_context;
 mod export;
 mod projection;
 mod scenario;
 
+pub(crate) use edit_context::scenario_edit_context;
+pub use edit_context::{ScenarioEditContext, ScenarioEditDiagnostic, ScenarioEditTimeslot};
 pub use export::*;
 
 pub use scenario::{
-    SCENARIO_TIMETABLE_READ_MODEL_SCHEMA_VERSION, ScenarioTimetableEntityPage,
-    ScenarioTimetablePage, ScenarioTimetableQueryError, query_scenario_timetable,
-    query_scenario_timetable_entities,
+    SCENARIO_TIMETABLE_READ_MODEL_SCHEMA_VERSION, ScenarioActivityLockState,
+    ScenarioTimetableEntityPage, ScenarioTimetablePage, ScenarioTimetableQueryError,
+    query_scenario_timetable, query_scenario_timetable_entities,
 };
 
 pub const TIMETABLE_READ_MODEL_SCHEMA_VERSION: u32 = 1;
@@ -141,6 +144,7 @@ pub struct TimetableRow {
 /// Every Calendar slot is present, including empty slots and slots whose rows are on other pages.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct TimetableGridCell {
+    pub timeslot_id: TimeslotId,
     pub timeslot_index: u32,
     pub day: Day,
     pub day_label: String,

@@ -226,6 +226,23 @@ impl SchedulingProblemSnapshot {
         &self.0.locks
     }
 
+    /// Adds explicit locks while preserving every lock in the original problem.
+    /// The added locks are ordered by activity so their input order does not change the snapshot.
+    ///
+    /// # Errors
+    /// Runs the complete structural gate, rejecting unknown indices or repeated locked activities.
+    /// Assignment feasibility remains the independent Hard validator's responsibility.
+    pub fn with_additional_locks(
+        &self,
+        additional: &[LockedAssignment],
+    ) -> Result<Self, SchedulingError> {
+        let mut draft = self.0.clone();
+        let mut additional = additional.to_vec();
+        additional.sort_by_key(|lock| lock.assignment.activity);
+        draft.locks.extend(additional);
+        Self::try_from(draft)
+    }
+
     /// Expands an activity start into its consecutive occupied timeslots.
     ///
     /// # Errors
@@ -310,7 +327,9 @@ fn validate_structure(draft: &SchedulingProblemDraft) -> Result<(), SchedulingEr
                         index: next.0,
                         len: slot_count,
                     })?;
-            if next_slot.day != slot.day || next_slot.period_index != slot.period_index + 1 {
+            if next_slot.day != slot.day
+                || slot.period_index.checked_add(1) != Some(next_slot.period_index)
+            {
                 return Err(SchedulingError::InvalidConsecutiveLink { index });
             }
         }

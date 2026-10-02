@@ -15,9 +15,9 @@ function response() {
       startTimeslotIndex: 0, day: "monday", dayLabel: "星期一", periodIndex: 1, periodLabel: "第1节",
       durationPeriods: 1, occupiedTimeslotIndices: [0], grade: entity, subject: entity, coursePlan: entity,
       audience: { kind: "teaching_section", entity }, teacher: entity, room: entity, studentCount: 12 }],
-    calendar: [{ timeslotIndex: 0, day: "monday", dayLabel: "星期一", periodIndex: 1, periodLabel: "第1节",
+    calendar: [{ timeslotId: id, timeslotIndex: 0, day: "monday", dayLabel: "星期一", periodIndex: 1, periodLabel: "第1节",
       instructionalBlock: 1, occupiedCount: 1, pageActivityIds: [id] },
-    { timeslotIndex: 1, day: "monday", dayLabel: "星期一", periodIndex: 2, periodLabel: "第2节",
+    { timeslotId: "22222222-2222-4222-8222-222222222222", timeslotIndex: 1, day: "monday", dayLabel: "星期一", periodIndex: 2, periodLabel: "第2节",
       instructionalBlock: 1, occupiedCount: 1, pageActivityIds: [] }],
     totalRows: 2, offset: 0, hasMore: true, nextOffset: 1,
     quality: [{ id: "distribution", priority: 1, value: "9223372036854775807", metrics: [{
@@ -43,6 +43,8 @@ test("invalid schema, unsafe integers, adoption and missing row references fail 
     (value) => { value.rows[0].occupiedTimeslotIndices = [3]; },
     (value) => { value.rows[0].studentCount = 2.5; },
     (value) => { value.quality[0].value = 1; },
+    (value) => { delete value.calendar[0].timeslotId; },
+    (value) => { value.calendar[1].timeslotId = value.calendar[0].timeslotId; },
   ]) {
     const value = response(); mutate(value);
     assert.throws(() => parseSavedTimetablePage(value), { code: "DESKTOP_TIMETABLE_INVALID_RESPONSE" });

@@ -205,6 +205,17 @@ fn scenario_seven_views_select_exact_entities_including_unused_resources() {
         .unwrap();
         assert_eq!(page.total_rows, expected, "{view:?}");
         assert_eq!(page.calendar.len(), 20);
+        let loaded = load_scenario(&store, receipt.scenario_id).unwrap();
+        for cell in &page.calendar {
+            let slot = &loaded.compiled().problem.timeslots()[cell.timeslot_index as usize];
+            assert_eq!(cell.timeslot_id, slot.stable_id);
+            assert_eq!((cell.day, cell.period_index), (slot.day, slot.period_index));
+        }
+        assert_eq!(page.activity_locks.len(), page.rows.len());
+        for (row, state) in page.rows.iter().zip(&page.activity_locks) {
+            assert_eq!(state.activity_id, row.activity_id);
+            assert!(!state.source_locked && !state.user_locked);
+        }
         assert_eq!(page.receipt, receipt);
         assert_eq!(page.scenario_display_name, "采用方案");
         assert!(page.source_is_current);

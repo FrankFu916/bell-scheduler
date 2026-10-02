@@ -7,6 +7,7 @@
 mod import_command;
 mod run_history;
 mod scenario_commands;
+mod scenario_edit;
 mod scenario_export;
 mod scenario_timetable;
 mod solve_project;
@@ -93,6 +94,10 @@ enum Command {
     ScenarioTimetable(scenario_timetable::ScenarioTimetableArgs),
     /// Export the complete selected scenario timetable to a new Excel or CSV file.
     ExportScenario(scenario_export::ExportScenarioArgs),
+    /// Preview one manual change against every Hard constraint without writing to the database.
+    PreviewScenarioEdit(scenario_edit::PreviewArgs),
+    /// Revalidate and atomically commit one change using the preview's revisions and hashes.
+    CommitScenarioEdit(scenario_edit::CommitArgs),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -465,6 +470,8 @@ pub fn run(cli: Cli) -> Result<RunOutcome, CliFailure> {
         Command::ShowScenario(args) => scenario_commands::show(&args),
         Command::ScenarioTimetable(args) => scenario_timetable::run(&args),
         Command::ExportScenario(args) => scenario_export::run(&args),
+        Command::PreviewScenarioEdit(args) => scenario_edit::preview(&args),
+        Command::CommitScenarioEdit(args) => scenario_edit::commit(&args),
     }
 }
 

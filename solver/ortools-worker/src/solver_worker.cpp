@@ -1168,6 +1168,20 @@ std::optional<Failure> BuildBaseModel(
     }
   }
 
+  // Meetings can share an offering's teacher variable or a fixed room binding.
+  // CP-SAT rejects duplicate hint entries, even when they carry the same value.
+  std::map<int, std::int64_t> hinted_resource_values;
+  const auto add_resource_hint = [&hinted_resource_values, built](
+                                     sat::IntVar variable,
+                                     std::int64_t value) -> bool {
+    const auto [entry, inserted] =
+        hinted_resource_values.emplace(variable.index(), value);
+    if (!inserted) {
+      return entry->second == value;
+    }
+    built->model.AddHint(variable, value);
+    return true;
+  };
   for (const auto& incumbent : problem.incumbent_assignments()) {
     auto& variables =
         built->activities[activity_index.at(incumbent.activity_id())];
@@ -1176,12 +1190,16 @@ std::optional<Failure> BuildBaseModel(
                            start.timeslot_id == incumbent.start_timeslot_id());
     }
     if (Contains(variables.teacher_candidates,
-                 static_cast<std::int64_t>(incumbent.teacher_id()))) {
-      built->model.AddHint(variables.teacher, incumbent.teacher_id());
+                 static_cast<std::int64_t>(incumbent.teacher_id())) &&
+        !add_resource_hint(variables.teacher, incumbent.teacher_id())) {
+      return Failure{protocol::SOLVER_STATUS_INVALID_INPUT,
+                     "WORKER.CONFLICTING_INCUMBENT_HINT"};
     }
     if (Contains(variables.room_candidates,
-                 static_cast<std::int64_t>(incumbent.room_id()))) {
-      built->model.AddHint(variables.room, incumbent.room_id());
+                 static_cast<std::int64_t>(incumbent.room_id())) &&
+        !add_resource_hint(variables.room, incumbent.room_id())) {
+      return Failure{protocol::SOLVER_STATUS_INVALID_INPUT,
+                     "WORKER.CONFLICTING_INCUMBENT_HINT"};
     }
   }
   return std::nullopt;
