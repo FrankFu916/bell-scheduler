@@ -1,8 +1,14 @@
 .PHONY: toolchain check test lint fmt rust-gate frontend-install frontend-check desktop-build desktop-bundle staging-test verify-ortools worker-configure worker-build worker-test gate
+.NOTPARALLEL:
 
 RUST_TOOLCHAIN ?= 1.88.0
 RUST_TARGET_DIR ?= $(CURDIR)/target/rust-$(RUST_TOOLCHAIN)
 BUILD_JOBS ?= 1
+ifneq ($(BUILD_JOBS),1)
+ifneq ($(BUILD_JOBS),2)
+$(error BUILD_JOBS must be 1 or 2)
+endif
+endif
 BUILD_NICE ?= 10
 LOW_PRIORITY = nice -n "$(BUILD_NICE)"
 RUST_TOOLCHAIN_BIN := $(shell rustup which --toolchain $(RUST_TOOLCHAIN) cargo 2>/dev/null | sed 's,/cargo$$,,')
